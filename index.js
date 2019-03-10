@@ -9,6 +9,7 @@ const path = require('path');
 const network = require('./network.js');
 
 
+// TODO(samthor): options from argv parser
 const options = {
   defaultPort: 9000,
   port: null,
