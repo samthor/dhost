@@ -44,12 +44,12 @@ This package has just a handful of direct dependencies.
 
 Needed for the middleware only:
 
-* `he`: escapes names in generated directory listing
-* `mime`: guesses mime-type for `Content-Type` header
+* `he` escapes names in generated directory listing
+* `mime` guesses mime-types for the `Content-Type` header
 
 Included for the CLI:
 
-* `bytes`: to display nicely-formatted download sizes
-* `chalk`: for color output
-* `clipboardy`: copies webserver address to clipboard on start
-* `mri`: for parsing command-line arguments
+* `bytes` displays nicely-formatted download sizes
+* `chalk` for color output
+* `clipboardy` copies webserver address to clipboard on start
+* `mri` parses command-line arguments
