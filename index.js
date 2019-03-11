@@ -1,58 +1,10 @@
 
 const fs = require('fs');
-const he = require('he');
+const listing = require('./listing.js');
 const mime = require('mime');
 const path = require('path');
 const stream = require('stream');
 const url = require('url');
-
-
-/**
- * @param {string} filename
- * @param {boolean=} hidden whether to include hidden files
- * @return {!Array<string>} contents of directory
- */
-async function directoryContents(filename, hidden=false) {
-  let listing = fs.readdirSync(filename);
-  if (!hidden) {
-    listing = listing.filter((cand) => cand[0] !== '.');
-  }
-
-  const s = (cand) => fs.statSync(path.join(filename, cand));
-  const stats = await Promise.all(listing.map(s));
-
-  listing = listing.map((cand, i) => {
-    const stat = stats[i];
-    if (stat.isDirectory()) {
-      return cand + '/';  // don't use path.sep, HTTP servers are always /
-    }
-    return cand;
-  });
-
-  listing.sort((a, b) => {
-    const dirA = a[a.length - 1] === '/';
-    const dirB = b[b.length - 1] === '/';
-
-    // place subdirs first
-    if (dirA !== dirB) {
-      if (dirA) {
-        return -1;
-      } else {
-        return +1;
-      }
-    }
-
-    // sort by name
-    if (a[0] < b[0]) {
-      return -1;
-    } else if (a[0] > b[0]) {
-      return +1;
-    }
-    return 0;
-  });
-
-  return listing;
-}
 
 
 /**
@@ -98,6 +50,7 @@ function buildHandler(options) {
     path: '.',
     cors: false,
     serveLink: false,
+    listing: true,
   }, options);
 
   const redirectToLink = !options.serveLink;
@@ -188,21 +141,17 @@ function buildHandler(options) {
         res.writeHead(302, {'Location': dir + '/'});
         return res.end();
 
-      } else {
+      } else if (options.listing) {
         // list contents into simple HTML
-        // TODO(samthor): super-basic nice template
-        const contents = await directoryContents(filename);
-        const raw = contents.map((pathname) => {
-          const escaped = escape(pathname);
-          const encoded = he.encode(pathname);
-          return `<a href="${escaped}">${encoded}</a><br />\n`;
-        }).join('');
-
+        const raw = await listing(filename, pathname);
         const buffer = Buffer.from(raw, 'utf-8');
         res.setHeader('Content-Length', buffer.length);
         res.setHeader('Content-Type', 'text/html');
         readStream = await createStringReadStream(buffer);
         stat = null;
+
+      } else {
+        return next();
       }
     }
 
