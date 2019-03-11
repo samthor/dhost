@@ -7,6 +7,17 @@ Install globally via `npm -g install devserver` or `yarn global add devserver`, 
 ⚠️ This is just for development.
 Don't use it in any sort of production.
 
+# Magic
+
+The goal of this server is not to surprise you, and to avoid magic where possible.
+Its behvaior will never intentionally match any particular hosting platform's semantics.
+
+Here are the exceptions:
+
+* We serve `index.html` if found, or generate a simple directory listing otherwise
+* Symlinks generate a 302 to their target file if it's within the root (serve contents instead via flag)
+* No data is served for other status codes (i.e., your browser will render its own 404 page)
+
 # Running
 
 Run `devserver -h` for flags.
@@ -14,14 +25,14 @@ By default, this hosts only on `localhost`, on the first available port 9000 or 
 
 # Middleware
 
-This can be used as middleware. For instance, to serve the current directory, without caching, inside Polka:
+This can be used as middleware. To serve the current directory—without caching—with Polka:
 
 ```js
 const polka = require('polka');
 const devserver = require('devserver');
 
 polka()
-  .use(devserver())
+  .use(devserver({ /* optional options */}))
   .listen(3000, (err) => {
     // ...
   });
@@ -31,7 +42,7 @@ polka()
 
 This package has just a handful of direct dependencies.
 
-Included for the middleware only:
+Needed for the middleware only:
 
 * `he`: escapes names in generated directory listing
 * `mime`: guesses mime-type for `Content-Type` header
