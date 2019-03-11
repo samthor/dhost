@@ -5,24 +5,62 @@ const bytes = require('bytes');
 const chalk = require('chalk');
 const clipboardy = require('clipboardy');
 const http = require('http');
-const path = require('path');
+const mri = require('mri');
 const network = require('./network.js');
+const path = require('path');
 
 
-// TODO(samthor): options from argv parser
-const options = {
-  defaultPort: 9000,
-  port: null,
-  cors: false,
-  path: '.',
-  bindAll: true,
-};
+const options = mri(process.argv.slice(2), {
+  default: {
+    defaultPort: 9000,
+    port: null,
+    cors: false,
+    serveLink: false,
+    bindAll: false,
+    help: false,
+  },
+  alias: {
+    port: 'p',
+    cors: 'c',
+    serveLink: ['l', 'serve-link'],
+    bindAll: ['a', 'bind-all'],
+    help: 'h',
+  },
+  unknown: (v) => {
+    console.error('error: unknown option `' + v + '`');
+    process.exit(1);
+  },
+});
+
+if (options.help) {
+  const helpString = `Usage: devserve [options] <root_path>
+
+Development HTTP server for static files, instructing browsers NEVER to cache
+results. Serves from any number of paths (default "."). Directories show simple
+listing or any found "index.html" file.
+
+Options:
+  -p, --port <n>       explicit serving port
+  -c, --cors           whether to allow CORS requests
+  -l, --serve-link     serve symlink target (unsafe, allows escaping root)
+  -a, --bind-all       listen on all network interfaces, not just localhost
+`;
+
+  console.info(helpString);
+  process.exit(0);
+}
+
+
+if (typeof options.port !== 'number') {
+  options.port = null;
+}
+options.path = options._[0] || '.';
+const handler = buildHandler(options);
 
 
 async function bindAndStart() {
-  let handler;
-
   const internalHandler = (req, res) => {
+    // call our generated middleware and fail with 404 or 405
     handler(req, res, () => {
       let status = 404;
   
@@ -52,24 +90,21 @@ async function bindAndStart() {
       server.on('error', () => resolve(false));
     });
     if (ok) {
-      break;
+      return server;
     }
+
+    // explicit port requested, but it couldn't be served
     if (options.port) {
       throw new Error(`Could not bind to requested port: ${options.port}`);
     }
 
+    // otherwise, increment and try a new port
+    ++port;
     const count = port - start;
     if (count > 1000) {
       throw new Error(`tried ${count} ports, could not serve`);
     }
-    ++port;
   }
-
-  handler = buildHandler(options, server);
- 
-  const v = `http://${host}:${port}`;
-  clipboardy.writeSync(v);
-  return server;
 }
 
 
@@ -82,6 +117,7 @@ bindAndStart().then((server) => {
   console.info(chalk.blue('*'), 'Local', chalk.green(localURL), chalk.dim('(on your clipboard!)'));
 
   if (options.bindAll) {
+    // log all IP addresses we're listening on
     const ips = network.localAddresses();
     ips.forEach(({address, family}) => {
       let display = address;
@@ -99,7 +135,7 @@ bindAndStart().then((server) => {
     const requestParts = [req.url];
     const remoteAddress = network.formatRemoteAddress(req.socket.remoteAddress);
     if (remoteAddress) {
-      requestParts.push(chalk.gray(remoteAddress));  // display non-localhost requests
+      requestParts.push(chalk.gray(remoteAddress));  // display remote addr for non-localhost
     }
 
     console.info(chalk.gray('>'), chalk.cyan(req.method), requestParts.join(' '));
@@ -110,26 +146,35 @@ bindAndStart().then((server) => {
       const ms = ((duration[0] + (duration[1] / 1e9)) * 1e3).toFixed(3);
 
       const responseColor = res.statusCode >= 400 ? chalk.red : chalk.green;
-      const parts = [responseColor(res.statusCode), responseColor(res.statusMessage)];
+      const responseParts = [responseColor(res.statusCode), responseColor(res.statusMessage)];
 
+      // Render the served URL, or the 3xx 'Location' field
       let url = req.url;
       if (res.statusCode >= 300 && res.statusCode < 400) {
         const location = res.getHeader('Location');
         if (location) {
-          url = path.join(req.url, location);
+          if (path.isAbsolute(location)) {
+            url = location;
+          } else {
+            url = path.join(req.url, location);
+          }
         }
       }
-      parts.push(url);
-      parts.push(chalk.dim(`${ms}ms`));
+      responseParts.push(url);
+      responseParts.push(chalk.dim(`${ms}ms`));
 
+      // Content-Length is only set by user code, not by Node, so it might not always exist
       const contentLength = res.getHeader('Content-Length');
       if (contentLength != null) {  // null or undefined
         const displayBytes = bytes(+contentLength || 0);
-        parts.push(displayBytes);
+        responseParts.push(displayBytes);
       }
 
-      console.info(chalk.gray('<'), parts.join(' '));
+      console.info(chalk.gray('<'), responseParts.join(' '));
     });
   });
 
-}).catch((err) => console.error(err));
+}).catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

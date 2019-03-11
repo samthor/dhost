@@ -55,6 +55,10 @@ async function directoryContents(filename, hidden=false) {
 }
 
 
+/**
+ * @param {string} raw string to push into readable stream
+ * @return {!stream.Readable} stream of string
+ */
 function createStringReadStream(raw) {
   const r = new stream.Readable();
   r.push(raw);
@@ -63,8 +67,16 @@ function createStringReadStream(raw) {
 }
 
 
-async function statOrNull(filename) {
+/**
+ * @param {string} filename to stat
+ * @param {boolean} lstat whether to use lstat
+ * @return {?fs.Stats} stats or null for unknown file
+ */
+async function statOrNull(filename, lstat=false) {
   try {
+    if (lstat) {
+      return fs.lstatSync(filename);
+    }
     return fs.statSync(filename);
   } catch (err) {
     return null;
@@ -73,11 +85,13 @@ async function statOrNull(filename) {
 
 
 module.exports = (options) => {
-  options = Object.assign(options, {
+  options = Object.assign({
     path: '.',
     cors: false,
-  });
+    serveLink: false,
+  }, options);
 
+  const redirectToLink = !options.serveLink;
   const rootPath = path.resolve(options.path);
 
   // implicit headers
@@ -89,6 +103,15 @@ module.exports = (options) => {
     headers['Access-Control-Allow-Origin'] = '*';
   }
 
+  const validPath = (cand) => {
+    if (!cand.startsWith(rootPath)) {
+      // ignore
+    } else if (cand.length === rootPath.length || cand[rootPath.length] === path.sep) {
+      return true;
+    }
+    return false;
+  };
+
   return async (req, res, next) => {
     // send implicit never-cache headers
     for (const key in headers) {
@@ -99,11 +122,38 @@ module.exports = (options) => {
       return next();
     }
 
-    // nb. NodeJS' HTTP server seems to prevent abuse, but it's worth checking
-    let filename = path.join(rootPath, '.', decodeURI(url.parse(req.url).pathname));
-    if (path.relative(rootPath, filename).startsWith('../')) {
+    const pathname = decodeURI(url.parse(req.url).pathname);
+    let filename = path.join(rootPath, '.', pathname);
+
+    // nb. NodeJS' HTTP server seems to prevent abuse, but it's worth checking that filename is
+    // within the root
+    if (!validPath(filename)) {
       res.writeHead(403);
       return res.end();
+    }
+
+    // Ensure the requested path is actually real, otherwise redirect to it. This behavior is the
+    // default and is 'costly' in that we must call readlink and do some checking.
+    if (redirectToLink) {
+      // trim trailing '/' as realpathSync won't return it
+      let filenameToCheck = filename;
+      const hasTrailingSep = filenameToCheck.endsWith(path.sep);
+      if (hasTrailingSep) {
+        filenameToCheck = filenameToCheck.substr(0, filenameToCheck.length - path.sep.length);
+      }
+
+      const real = fs.realpathSync(filenameToCheck);
+      if (real !== filenameToCheck) {
+        if (!validPath(real)) {
+          // can't escape via symlink
+          res.writeHead(403);
+          return res.end();
+        }
+
+        const absolute = '/' + path.relative(rootPath, real) + (hasTrailingSep ? '/' : '');
+        res.writeHead(302, {'Location': absolute});
+        return res.end();
+      }
     }
 
     let stat = await statOrNull(filename);
@@ -116,12 +166,12 @@ module.exports = (options) => {
     if (stat.isDirectory()) {
       // check for dir/index.html and serve that
       const cand = path.join(filename, 'index.html');
-      const defaultIndexStat = await statOrNull(cand);
+      const indexStat = await statOrNull(cand, redirectToLink);
 
-      if (defaultIndexStat && !defaultIndexStat.isDirectory()) {
-        // create stream for dir/index.html
+      if (indexStat && !indexStat.isDirectory() && !indexStat.isSymbolicLink()) {
+        // create stream for dir/index.html (not if dir or symlink)
         filename = cand;
-        stat = defaultIndexStat;
+        stat = indexStat;
 
       } else if (!filename.endsWith('/')) {
         // directory listings must end with /
