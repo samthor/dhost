@@ -1,4 +1,11 @@
 {
+  "name": "devserve",
+  "version": "0.1.0",
+  "description": "Never-caching development Node webserver",
+  "main": "index.js",
+  "repository": "git@github.com:samthor/devserve.git",
+  "author": "Sam Thorogood <sam.thorogood@gmail.com>",
+  "license": "Apache-2",
   "dependencies": {
     "bytes": "^3.1.0",
     "chalk": "^2.4.2",
@@ -6,5 +13,6 @@
     "he": "^1.2.0",
     "mime": "^2.4.0",
     "mri": "^1.1.4"
-  }
+  },
+  "bin": "./bin/index.js"
 }
