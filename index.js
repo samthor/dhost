@@ -20,6 +20,19 @@ function createStringReadStream(raw) {
 
 
 /**
+ * @param {string} filename to call realpath on
+ * @return {?string} realpath or null
+ */
+async function realpathOrNull(filename) {
+  try {
+    return fs.realpathSync(filename);
+  } catch (err) {
+    return null;
+  }
+}
+
+
+/**
  * @param {string} filename to stat
  * @param {boolean} lstat whether to use lstat
  * @return {?fs.Stats} stats or null for unknown file
@@ -104,8 +117,10 @@ function buildHandler(options) {
         filenameToCheck = filenameToCheck.substr(0, filenameToCheck.length - path.sep.length);
       }
 
-      const real = fs.realpathSync(filenameToCheck);
-      if (real !== filenameToCheck) {
+      const real = await realpathOrNull(filenameToCheck);
+      if (real === null) {
+        return next();  // file doesn't exist, short-circuit (don't need to stat)
+      } else if (real !== filenameToCheck) {
         if (!validPath(real)) {
           // can't escape via symlink
           res.writeHead(403);
@@ -120,7 +135,7 @@ function buildHandler(options) {
 
     let stat = await statOrNull(filename);
     if (stat === null) {
-      return next();  // file doesn't exist
+      return next();  // file doesn't exist (also checked in realpath above)
     }
 
     let readStream = null;
