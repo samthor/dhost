@@ -2,7 +2,7 @@ The never-caching development Node webserver for static files.
 This instructs browsers _never_ to cache any requested resources.
 If you've ever had to mash _Ctrl/Cmd-R_ to ensure your browser is seeing the latest version of a static site, you'll know this feeling.
 
-Install globally via `npm -g install devserver` or `yarn global add devserver`, then run `devserver`.
+Install globally via `npm -g install dhost` or `yarn global add dhost`, then run `dhost`.
 
 ⚠️ This is just for development.
 Don't use it in any sort of production.
@@ -20,7 +20,7 @@ Here are the exceptions:
 
 # Running
 
-Run `devserver -h` for flags.
+Run `dhost -h` for flags.
 By default, this hosts only on `localhost`, on the first available port 9000 or above, and copies the serving URL to your clipboard.
 
 # Middleware
@@ -29,10 +29,10 @@ This can be used as middleware. To serve the current directory—without caching
 
 ```js
 const polka = require('polka');
-const devserver = require('devserver');
+const dhost = require('dhost');
 
 polka()
-  .use(devserver({ /* optional options */}))
+  .use(dhost({ /* optional options */}))
   .listen(3000, (err) => {
     // ...
   });

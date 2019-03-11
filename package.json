@@ -1,9 +1,9 @@
 {
-  "name": "devserve",
+  "name": "dhost",
   "version": "0.1.0",
   "description": "Never-caching development Node webserver",
   "main": "index.js",
-  "repository": "git@github.com:samthor/devserve.git",
+  "repository": "git@github.com:samthor/dhost.git",
   "author": "Sam Thorogood <sam.thorogood@gmail.com>",
   "license": "Apache-2",
   "dependencies": {

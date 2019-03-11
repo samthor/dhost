@@ -33,7 +33,7 @@ const options = mri(process.argv.slice(2), {
 });
 
 if (options.help) {
-  const helpString = `Usage: devserve [options] <root_path>
+  const helpString = `Usage: dhost [options] <root_path>
 
 Development HTTP server for static files, instructing browsers NEVER to cache
 results. Serves from any number of paths (default "."). Directories show simple
