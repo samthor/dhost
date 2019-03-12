@@ -3,11 +3,15 @@
 const buildHandler = require('../index.js');
 const bytes = require('bytes');
 const chalk = require('chalk');
+const check = require('./check.js');
 const clipboardy = require('clipboardy');
 const http = require('http');
 const mri = require('mri');
 const network = require('./network.js');
+const os = require('os');
 const path = require('path');
+
+const spec = require('../package.json');
 
 
 const options = mri(process.argv.slice(2), {
@@ -18,12 +22,14 @@ const options = mri(process.argv.slice(2), {
     serveLink: false,
     bindAll: false,
     help: false,
+    skipCheck: false,
   },
   alias: {
     port: 'p',
     cors: 'c',
     serveLink: ['l', 'serve-link'],
     bindAll: ['a', 'bind-all'],
+    skipCheck: ['n', 'skip-check'],
     help: 'h',
   },
   unknown: (v) => {
@@ -33,7 +39,7 @@ const options = mri(process.argv.slice(2), {
 });
 
 if (options.help) {
-  const helpString = `Usage: dhost [options] <root_path>
+  const helpString = `Usage: ${spec['name']} [options] <root_path>
 
 Development HTTP server for static files, instructing browsers NEVER to cache
 results. Serves from any number of paths (default "."). Directories show simple
@@ -44,6 +50,7 @@ Options:
   -c, --cors           whether to allow CORS requests
   -l, --serve-link     serve symlink target (unsafe, allows escaping root)
   -a, --bind-all       listen on all network interfaces, not just localhost
+  -n, --skip-check     don't check for an updated version of ${spec['name']}
 `;
 
   console.info(helpString);
@@ -177,4 +184,34 @@ bindAndStart().then((server) => {
 }).catch((err) => {
   console.error(err);
   process.exit(1);
+});
+
+
+(async function checkForUpdate() {
+  if (options.skipCheck) {
+    return;
+  }
+
+  // TODO(samthor): use a package helper (which might create a temp folder)
+
+  const after = 1000 * (10 + 10 * Math.random());  // 10-20 sec delay
+  await new Promise((r) => setTimeout(r, after));
+
+  const latestVersion = await check(spec);
+  if (!latestVersion) {
+    return;  // up-to-date
+  }
+
+  process.on('SIGINT', () => {
+    process.exit(128 + (os.constants.signals.SIGINT || 0));
+  });
+
+  process.on('exit', () => {
+    console.info();
+    console.info(`${chalk.bold(spec['name'])} upgrade available (latest ${chalk.green(latestVersion)}, installed ${chalk.red(spec['version'])})`);
+  });
+
+}()).catch((err) => {
+  // ignore err
+  console.debug('udpate check err', err);
 });
