@@ -1,6 +1,7 @@
 
 const fs = require('fs');
 const he = require('he');
+const helper = require('./helper.js');
 const path = require('path');
 
 
@@ -10,17 +11,22 @@ const path = require('path');
  * @return {!Array<string>} contents of directory
  */
 async function directoryContents(filename, hidden=false) {
-  let listing = fs.readdirSync(filename);
+  let listing = await new Promise((resolve, reject) => {
+    fs.readdir(filename, (err, files) => err ? reject(err) : resolve(files));
+  });
   if (!hidden) {
     listing = listing.filter((cand) => cand[0] !== '.');
   }
 
-  const s = (cand) => fs.statSync(path.join(filename, cand));
+  const s = (cand) => {
+    const target = path.join(filename, cand);
+    return helper.statOrNull(target);
+  };
   const stats = await Promise.all(listing.map(s));
 
   listing = listing.map((cand, i) => {
     const stat = stats[i];
-    if (stat.isDirectory()) {
+    if (stat && stat.isDirectory()) {
       return cand + '/';  // don't use path.sep, HTTP servers are always /
     }
     return cand;
@@ -39,7 +45,7 @@ async function directoryContents(filename, hidden=false) {
       }
     }
 
-    // sort by name
+    // sort by name (Node does this on Linux but it's not guaranteed)
     if (a[0] < b[0]) {
       return -1;
     } else if (a[0] > b[0]) {

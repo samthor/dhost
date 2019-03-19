@@ -1,52 +1,11 @@
 
 const fs = require('fs');
+const helper = require('./helper.js');
 const listing = require('./listing.js');
 const mime = require('mime');
 const path = require('path');
-const stream = require('stream');
 const url = require('url');
 
-
-/**
- * @param {string} raw string to push into readable stream
- * @return {!stream.Readable} stream of string
- */
-function createStringReadStream(raw) {
-  const r = new stream.Readable();
-  r.push(raw);
-  r.push(null);
-  return r;
-}
-
-
-/**
- * @param {string} filename to call realpath on
- * @return {?string} realpath or null
- */
-async function realpathOrNull(filename) {
-  try {
-    return fs.realpathSync(filename);
-  } catch (err) {
-    return null;
-  }
-}
-
-
-/**
- * @param {string} filename to stat
- * @param {boolean} lstat whether to use lstat
- * @return {?fs.Stats} stats or null for unknown file
- */
-async function statOrNull(filename, lstat=false) {
-  try {
-    if (lstat) {
-      return fs.lstatSync(filename);
-    }
-    return fs.statSync(filename);
-  } catch (err) {
-    return null;
-  }
-}
 
 /**
  * Builds middleware that serves static files from the specified path, or the
@@ -110,14 +69,14 @@ function buildHandler(options) {
     // Ensure the requested path is actually real, otherwise redirect to it. This behavior is the
     // default and is 'costly' in that we must call readlink and do some checking.
     if (redirectToLink) {
-      // trim trailing '/' as realpathSync won't return it
+      // trim trailing '/' as realpath won't return it
       let filenameToCheck = filename;
       const hasTrailingSep = filenameToCheck.endsWith(path.sep);
       if (hasTrailingSep) {
         filenameToCheck = filenameToCheck.substr(0, filenameToCheck.length - path.sep.length);
       }
 
-      const real = await realpathOrNull(filenameToCheck);
+      const real = await helper.realpathOrNull(filenameToCheck);
       if (real === null) {
         return next();  // file doesn't exist, short-circuit (don't need to stat)
       } else if (real !== filenameToCheck) {
@@ -133,7 +92,7 @@ function buildHandler(options) {
       }
     }
 
-    let stat = await statOrNull(filename);
+    let stat = await helper.statOrNull(filename);
     if (stat === null) {
       return next();  // file doesn't exist (also checked in realpath above)
     }
@@ -143,7 +102,7 @@ function buildHandler(options) {
     if (stat.isDirectory()) {
       // check for dir/index.html and serve that
       const cand = path.join(filename, 'index.html');
-      const indexStat = await statOrNull(cand, redirectToLink);
+      const indexStat = await helper.statOrNull(cand, redirectToLink);
 
       if (indexStat && !indexStat.isDirectory() && !indexStat.isSymbolicLink()) {
         // create stream for dir/index.html (not if dir or symlink)
@@ -162,7 +121,7 @@ function buildHandler(options) {
         const buffer = Buffer.from(raw, 'utf-8');
         res.setHeader('Content-Length', buffer.length);
         res.setHeader('Content-Type', 'text/html');
-        readStream = await createStringReadStream(buffer);
+        readStream = await helper.createStringReadStream(buffer);
         stat = null;
 
       } else {
