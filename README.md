@@ -10,7 +10,7 @@ Don't use it in any sort of production.
 # Magic
 
 The goal of this server is not to surprise you, and to avoid magic where possible.
-Its behvaior will never intentionally match any particular hosting platform's semantics.
+Its behavior will never intentionally match any particular hosting platform's semantics.
 
 Here are the exceptions:
 
