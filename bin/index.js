@@ -51,7 +51,9 @@ Options:
   -l, --serve-link     serve symlink target (unsafe, allows escaping root)
   -a, --bind-all       listen on all network interfaces, not just localhost
   -n, --skip-check     don't check for an updated version of ${spec['name']}
-`;
+
+v${spec['version']}
+  `;
 
   console.info(helpString);
   process.exit(0);
