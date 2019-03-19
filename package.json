@@ -1,7 +1,8 @@
 {
   "name": "dhost",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Never-caching development Node webserver",
+  "homepage": "https://github.com/samthor/dhost",
   "main": "index.js",
   "repository": "git@github.com:samthor/dhost.git",
   "author": "Sam Thorogood <sam.thorogood@gmail.com>",
