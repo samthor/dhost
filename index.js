@@ -37,8 +37,6 @@ function buildHandler(options) {
     headers['Access-Control-Allow-Origin'] = '*';
   }
 
-  const validPath = helper.pathInRoot.bind(null, rootPath);
-
   return async (req, res, next) => {
     // send implicit never-cache headers
     for (const key in headers) {
@@ -49,13 +47,13 @@ function buildHandler(options) {
       return next();
     }
 
-    // Call normalize on the absolute pathname (e.g. "/../../foo" => "/foo"), to prevent abuse.
-    // Node already refuses to answer requests like "GET ../../", but sanity-check anyway.
     const rawPath = decodeURI(url.parse(req.url).pathname);
-    if (!rawPath.startsWith('/')) {
+    if (!rawPath.startsWith('/')) {  // node should prevent this, but sanity-check anyway
       res.writeHead(400);
       return res.end();
     }
+
+    // Call normalize on the absolute pathname (e.g. "/../../foo" => "/foo"), to prevent abuse.
     const pathname = path.normalize(rawPath);
     let filename = path.join(rootPath, '.', pathname);
 

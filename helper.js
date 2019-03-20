@@ -135,7 +135,6 @@ function pathInRoot(root, cand) {
 
 module.exports = {
   createStringReadStream,
-  pathInRoot,
   realpathIn,
   statOrNull,
 };
