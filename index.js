@@ -49,8 +49,8 @@ function buildHandler(options) {
       return next();
     }
 
-    // Call normalize on the absolute path (e.g. "/../../foo" => "/foo"), to prevent abuse. Node
-    // already refuses to answer requests like "GET ../../", _but_ sanity-check it anyway.
+    // Call normalize on the absolute pathname (e.g. "/../../foo" => "/foo"), to prevent abuse.
+    // Node already refuses to answer requests like "GET ../../", but sanity-check anyway.
     const rawPath = decodeURI(url.parse(req.url).pathname);
     if (!rawPath.startsWith('/')) {
       res.writeHead(400);
@@ -63,13 +63,12 @@ function buildHandler(options) {
     // default and is 'costly' in that we must call readlink a bunch and do some checks.
     if (redirectToLink) {
       const real = await helper.realpathIn(rootPath, pathname);
+      if (real === null) {
+        // can't escape via symlink
+        res.writeHead(403);
+        return res.end();
+      }
       if (real !== filename) {
-        if (!validPath(real)) {
-          // can't escape via symlink
-          res.writeHead(403);
-          return res.end();
-        }
-
         const hasTrailingSep = filename.endsWith(path.sep);
         const absolute = '/' + path.relative(rootPath, real) + (hasTrailingSep ? '/' : '');
         res.writeHead(302, {'Location': absolute});

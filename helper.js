@@ -16,6 +16,28 @@ function readlinkOrNull(filename) {
 
 
 /**
+ * As per `fs.realpath`, but only operates on the last segment of the filename.
+ *
+ * @param {string} filename to resolve
+ * @return {string} resolved filename
+ */
+async function reallink(filename) {
+  let curr = filename;
+
+  for (;;) {
+    const link = await readlinkOrNull(curr);
+    if (link === null) {
+      return curr;
+    } else if (path.isAbsolute(link)) {
+      curr = link;
+    } else {
+      curr = path.join(path.dirname(curr), path.sep, link);
+    }
+  }
+}
+
+
+/**
  * @param {*} filename 
  * @return {!Array<string>} parts of 
  */
@@ -46,43 +68,35 @@ function createStringReadStream(raw) {
 }
 
 
+/**
+ * @param {string} root where results are valid within
+ * @param {string} pathname within root, as per HTTP request
+ */
 async function realpathIn(root, pathname) {
   const hasTrailingSep = pathname.endsWith(path.sep);
+
+  // TODO: path.normalize might fail on Windows as it's operating on a HTTP request pathname
   const parts = splitPath(path.normalize(pathname));
 
-  let combined = root;
-  let absoluteFrom = -1;
-  let resolvedParts = await Promise.all(parts.map(async (part, i) => {
-    console.info(`checking part "${part}"`);
-    if (part.length) {
-      combined = path.join(combined, path.sep, part);
-      const link = await readlinkOrNull(combined);
-      if (link !== null) {
-        console.info('got link', link);
-        if (path.isAbsolute(link)) {
-          absoluteFrom = Math.max(absoluteFrom, i);
-        }
-        return link;
-      }
+  let curr = root;
+  for (const part of parts) {
+    if (!part.length) {
+      continue;
     }
-    return part;
-  }));
 
-  let output = root;
+    const test = path.join(curr, path.sep, part);
+    curr = await reallink(test);
 
-  if (absoluteFrom >= 0) {
-    output = resolvedParts[absoluteFrom];
-    resolvedParts = resolvedParts.slice(absoluteFrom + 1);
+    // If the path was modified, then a symlink was resolved. Check if it's still valid.
+    if (curr !== test && !pathInRoot(root, curr)) {
+      return null;
+    }
+
+    // TODO(samthor): This could be a real file, or a missing file. Check for missing file and
+    // complete fast/early in this case.
   }
 
-  resolvedParts.forEach((part) => {
-    if (part.length) {
-      output = path.join(output, path.sep, part);
-    }
-    console.info('step', output, part);
-  });
-
-  return output + (hasTrailingSep ? path.sep : '');
+  return path.join(curr, hasTrailingSep ? path.sep : '');
 }
 
 
