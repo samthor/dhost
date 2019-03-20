@@ -26,7 +26,7 @@ function buildHandler(options) {
   }, options);
 
   const redirectToLink = !options.serveLink;
-  const rootPath = path.resolve(options.path);
+  const rootPath = path.resolve(options.path);  // resolves symlinks
 
   // implicit headers
   const headers = {
@@ -37,14 +37,7 @@ function buildHandler(options) {
     headers['Access-Control-Allow-Origin'] = '*';
   }
 
-  const validPath = (cand) => {
-    if (!cand.startsWith(rootPath)) {
-      // ignore
-    } else if (cand.length === rootPath.length || cand[rootPath.length] === path.sep) {
-      return true;
-    }
-    return false;
-  };
+  const validPath = helper.pathInRoot.bind(null, rootPath);
 
   return async (req, res, next) => {
     // send implicit never-cache headers
@@ -56,36 +49,28 @@ function buildHandler(options) {
       return next();
     }
 
-    const pathname = decodeURI(url.parse(req.url).pathname);
-    let filename = path.join(rootPath, '.', pathname);
-
-    // nb. NodeJS' HTTP server seems to prevent abuse, but it's worth checking that filename is
-    // within the root
-    if (!validPath(filename)) {
-      res.writeHead(403);
+    // Call normalize on the absolute path (e.g. "/../../foo" => "/foo"), to prevent abuse. Node
+    // already refuses to answer requests like "GET ../../", _but_ sanity-check it anyway.
+    const rawPath = decodeURI(url.parse(req.url).pathname);
+    if (!rawPath.startsWith('/')) {
+      res.writeHead(400);
       return res.end();
     }
+    const pathname = path.normalize(rawPath);
+    let filename = path.join(rootPath, '.', pathname);
 
     // Ensure the requested path is actually real, otherwise redirect to it. This behavior is the
-    // default and is 'costly' in that we must call readlink and do some checking.
+    // default and is 'costly' in that we must call readlink a bunch and do some checks.
     if (redirectToLink) {
-      // trim trailing '/' as realpath won't return it
-      let filenameToCheck = filename;
-      const hasTrailingSep = filenameToCheck.endsWith(path.sep);
-      if (hasTrailingSep) {
-        filenameToCheck = filenameToCheck.substr(0, filenameToCheck.length - path.sep.length);
-      }
-
-      const real = await helper.realpathOrNull(filenameToCheck);
-      if (real === null) {
-        return next();  // file doesn't exist, short-circuit (don't need to stat)
-      } else if (real !== filenameToCheck) {
+      const real = await helper.realpathIn(rootPath, pathname);
+      if (real !== filename) {
         if (!validPath(real)) {
           // can't escape via symlink
           res.writeHead(403);
           return res.end();
         }
 
+        const hasTrailingSep = filename.endsWith(path.sep);
         const absolute = '/' + path.relative(rootPath, real) + (hasTrailingSep ? '/' : '');
         res.writeHead(302, {'Location': absolute});
         return res.end();
@@ -94,7 +79,7 @@ function buildHandler(options) {
 
     let stat = await helper.statOrNull(filename);
     if (stat === null) {
-      return next();  // file doesn't exist (also checked in realpath above)
+      return next();  // file doesn't exist
     }
 
     let readStream = null;
