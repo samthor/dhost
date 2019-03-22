@@ -2,6 +2,7 @@
 const stream = require('stream');
 const fs = require('fs');
 const path = require('path');
+const platform = require('./platform.js');
 
 
 /**
@@ -38,7 +39,7 @@ async function reallink(filename) {
 
 
 /**
- * @param {*} filename 
+ * @param {string} filename
  * @return {!Array<string>} parts of 
  */
 function splitPath(filename) {
@@ -74,9 +75,7 @@ function createStringReadStream(raw) {
  */
 async function realpathIn(root, pathname) {
   const hasTrailingSep = pathname.endsWith(path.sep);
-
-  // TODO: path.normalize might fail on Windows as it's operating on a HTTP request pathname
-  const parts = splitPath(path.normalize(pathname));
+  const parts = splitPath(platform.posixToPlatform(path.posix.normalize(pathname)));
 
   let curr = root;
   for (const part of parts) {

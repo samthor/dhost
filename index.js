@@ -2,9 +2,16 @@
 const fs = require('fs');
 const helper = require('./helper.js');
 const listing = require('./listing.js');
+const platform = require('./platform.js');
 const mime = require('mime');
 const path = require('path');
 const url = require('url');
+
+
+function redirect(res, to) {
+  res.writeHead(302, {'Location': to});
+  return res.end();
+}
 
 
 /**
@@ -47,15 +54,18 @@ function buildHandler(options) {
       return next();
     }
 
-    const rawPath = decodeURI(url.parse(req.url).pathname);
-    if (!rawPath.startsWith('/')) {  // node should prevent this, but sanity-check anyway
+    const pathname = decodeURI(url.parse(req.url).pathname);
+    if (!pathname.startsWith('/')) {  // node should prevent this, but sanity-check anyway
       res.writeHead(400);
       return res.end();
     }
 
     // Call normalize on the absolute pathname (e.g. "/../../foo" => "/foo"), to prevent abuse.
-    const pathname = path.normalize(rawPath);
-    let filename = path.join(rootPath, '.', pathname);
+    const normalized = path.posix.normalize(pathname);
+    if (pathname !== normalized) {
+      return redirect(res, normalized);
+    }
+    let filename = path.join(rootPath, '.', platform.posixToPlatform(pathname));
 
     // Ensure the requested path is actually real, otherwise redirect to it. This behavior is the
     // default and is 'costly' in that we must call readlink a bunch and do some checks.
@@ -67,10 +77,10 @@ function buildHandler(options) {
         return res.end();
       }
       if (real !== filename) {
-        const hasTrailingSep = filename.endsWith(path.sep);
-        const absolute = '/' + path.relative(rootPath, real) + (hasTrailingSep ? '/' : '');
-        res.writeHead(302, {'Location': absolute});
-        return res.end();
+        const hasTrailingSep = pathname.endsWith('/');
+        const rel = platform.platformToPosix(path.relative(rootPath, real));
+        const absolute = '/' + rel + (hasTrailingSep ? '/' : '');
+        return redirect(res, absolute);
       }
     }
 
@@ -91,11 +101,10 @@ function buildHandler(options) {
         filename = cand;
         stat = indexStat;
 
-      } else if (!filename.endsWith('/')) {
+      } else if (!pathname.endsWith('/')) {
         // directory listings must end with /
-        const dir = path.basename(filename);
-        res.writeHead(302, {'Location': dir + '/'});
-        return res.end();
+        const dir = path.posix.basename(pathname);
+        return redirect(res, `${dir}/`);
 
       } else if (options.listing) {
         // list contents into simple HTML
