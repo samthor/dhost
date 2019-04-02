@@ -42,7 +42,7 @@ if (options.help) {
   const helpString = `Usage: ${spec['name']} [options] <root_path>
 
 Development HTTP server for static files, instructing browsers NEVER to cache
-results. Serves from any number of paths (default "."). Directories show simple
+results. Serves from the specified path (default "."). Directories show simple
 listing or any found "index.html" file.
 
 Options:
