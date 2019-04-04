@@ -25,6 +25,7 @@ const options = mri(process.argv.slice(2), {
     skipCheck: false,
   },
   alias: {
+    defaultPort: ['d', 'default-port'],  // not visible in help
     port: 'p',
     cors: 'c',
     serveLink: ['l', 'serve-link'],
