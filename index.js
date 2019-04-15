@@ -8,6 +8,9 @@ const path = require('path');
 const url = require('url');
 
 
+const rewriter = require('./lib/rewriter.js');
+
+
 function redirect(res, to) {
   res.writeHead(302, {'Location': to});
   return res.end();
@@ -126,6 +129,19 @@ function buildHandler(options) {
       const contentType = mime.getType(filename);
       if (contentType) {
         res.setHeader('Content-Type', contentType);
+      }
+
+      // FIXME: horrible hack
+      if (contentType === 'application/javascript') {
+        const raw = await helper.read(filename);
+        const start = process.hrtime();
+        const buffer = await rewriter(raw, {module: true});
+        res.setHeader('Content-Length', buffer.length);
+        const duration = process.hrtime(start);
+        const ms = ((duration[0] + (duration[1] / 1e9)) * 1e3).toFixed(3);
+        console.info('rewrite took', `${ms}ms`);
+
+        readStream = await helper.createStringReadStream(buffer);
       }
     }
 

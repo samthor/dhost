@@ -7,6 +7,19 @@ const platform = require('./platform.js');
 
 /**
  * @param {string} filename to read
+ * @return {!Buffer}
+ */
+function read(filename) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(filename, (err, buffer) => {
+      err ? reject(err) : resolve(buffer);
+    });
+  });
+}
+
+
+/**
+ * @param {string} filename to read
  * @return {?string} link value of filename, or null for nonexistent/invalid
  */
 function readlinkOrNull(filename) {
@@ -133,6 +146,7 @@ function pathInRoot(root, cand) {
 
 
 module.exports = {
+  read,
   createStringReadStream,
   realpathIn,
   statOrNull,
