@@ -135,7 +135,7 @@ function buildHandler(options) {
       if (contentType === 'application/javascript') {
         const raw = await helper.read(filename);
         const start = process.hrtime();
-        const buffer = await rewriter(raw, {module: true});
+        const buffer = await rewriter(filename, raw, {module: true});
         res.setHeader('Content-Length', buffer.length);
         const duration = process.hrtime(start);
         const ms = ((duration[0] + (duration[1] / 1e9)) * 1e3).toFixed(3);
