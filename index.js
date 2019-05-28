@@ -9,6 +9,7 @@ const url = require('url');
 
 
 const rewriter = require('./lib/rewriter.js');
+const rollupRewriter = require('./lib/rewriter-rollup.js');
 
 
 function redirect(res, to) {
@@ -134,6 +135,7 @@ function buildHandler(options) {
       // FIXME: horrible hack
       if (contentType === 'application/javascript') {
         const raw = await helper.read(filename);
+        // console.info('ROLLUP');
         const start = process.hrtime();
         const buffer = await rewriter(filename, raw, {module: true});
         res.setHeader('Content-Length', buffer.length);

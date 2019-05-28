@@ -13,7 +13,9 @@
     "clipboardy": "^1.2.3",
     "he": "^1.2.0",
     "mime": "^2.4.0",
-    "mri": "^1.1.4"
+    "mri": "^1.1.4",
+    "rollup": "^1.10.0",
+    "rollup-plugin-node-resolve": "^4.2.3"
   },
   "bin": "./bin/index.js"
 }
