@@ -22,6 +22,7 @@ function redirect(res, to) {
  *   path: (string|undefined),
  *   cors: (boolean|undefined),
  *   serveLink: (boolean|undefined),
+ *   listing: (boolean|undefined),
  * }} options
  */
 function buildHandler(options) {
