@@ -143,8 +143,10 @@ bindAndStart().then((server) => {
 
   server.on('request', (req, res) => {
     const requestParts = [req.url];
-    const remoteAddress = network.formatRemoteAddress(req.socket.remoteAddress);
-    if (remoteAddress) {
+
+    const forwardedFor = req.headers['x-forwarded-for'] || '';
+    const remoteAddresses = network.mergeForwardedFor(forwardedFor, req.socket.remoteAddress);
+    for (const remoteAddress of remoteAddresses) {
       requestParts.push(chalk.gray(remoteAddress));  // display remote addr for non-localhost
     }
 

@@ -29,10 +29,31 @@ function localAddresses() {
 
 
 /**
+ * @param {string} forwardedFor raw X-Forwarded-For header
+ * @param {string} address raw network address
+ * @return {!Array<string>}
+ */
+function mergeForwardedFor(forwardedFor, address) {
+  const parts = (forwardedFor || '').split(',').map(formatRemoteAddress).filter((x) => x);
+  address = formatRemoteAddress(address);
+
+  if (!address && parts.length) {
+    parts.push('localhost');  // should never happen: X-Forwarded-For _and_ localhost?
+  } else if (address && parts[parts.length - 1] !== address) {
+    parts.push(address);
+  }
+
+  return parts;
+}
+
+
+/**
  * @param {string} address to format
  * @return {?string} formatted address, or null for localhost
  */
 function formatRemoteAddress(address) {
+  address = address.trim();
+
   if (address.startsWith('::ffff:')) {
     address = address.substr(7);  // remove IPv4-in-IPv6
   }
@@ -47,5 +68,6 @@ function formatRemoteAddress(address) {
 
 module.exports = {
   localAddresses,
+  mergeForwardedFor,
   formatRemoteAddress,
 };
