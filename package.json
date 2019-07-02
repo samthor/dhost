@@ -1,6 +1,6 @@
 {
   "name": "dhost",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Never-caching development Node webserver",
   "homepage": "https://github.com/samthor/dhost",
   "main": "index.js",
