@@ -112,7 +112,7 @@ async function bindAndStart() {
     ++port;
     const count = port - start;
     if (count > 1000) {
-      throw new Error(`tried ${count} ports, could not serve`);
+      throw new Error(`Tried ${count} ports, could not serve`);
     }
   }
 }
@@ -121,10 +121,17 @@ async function bindAndStart() {
 bindAndStart().then((server) => {
   const serverAddress = server.address();
   const localURL = `http://localhost:${serverAddress.port}`;
-  clipboardy.writeSync(localURL);
+
+  let clipboardError = null;
+  try {
+    // Clipboardy can fail on headless Linux systems (possibly others).
+    clipboardy.writeSync(localURL);
+  } catch (e) {
+    clipboardError = e;
+  }
 
   console.info(chalk.blue('*'), 'Serving static files from', chalk.cyan(path.resolve(options.path)));
-  console.info(chalk.blue('*'), 'Local', chalk.green(localURL), chalk.dim('(on your clipboard!)'));
+  console.info(chalk.blue('*'), 'Local', chalk.green(localURL), clipboardError ? chalk.red('(could not copy to clipboard)') : chalk.dim('(on your clipboard!)'));
 
   if (options.bindAll) {
     // log all IP addresses we're listening on
@@ -218,5 +225,4 @@ bindAndStart().then((server) => {
 
 }()).catch((err) => {
   // ignore err
-  console.debug('udpate check err', err);
 });
