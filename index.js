@@ -112,7 +112,7 @@ function buildHandler(options) {
         const raw = await listing(filename, pathname);
         const buffer = Buffer.from(raw, 'utf-8');
         res.setHeader('Content-Length', buffer.length);
-        res.setHeader('Content-Type', 'text/html');
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
         readStream = await helper.createStringReadStream(buffer);
         stat = null;
 
@@ -126,7 +126,11 @@ function buildHandler(options) {
       res.setHeader('Content-Length', stat.size);
       const contentType = mime.getType(filename);
       if (contentType) {
-        res.setHeader('Content-Type', contentType);
+        let extra = '';
+        if (contentType.startsWith('text/')) {
+          extra = '; charset=utf-8'
+        }
+        res.setHeader('Content-Type', contentType + extra);
       }
     }
 
