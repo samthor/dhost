@@ -15,6 +15,25 @@ function redirect(res, to) {
 
 
 /**
+ * Returns the request path as a relative path, dealing with nuances while being
+ * served under a different host (c.f. originalUrl). This will always return a
+ * string that begins with '.'.
+ *
+ * @param {!http.IncomingMessage} req
+ * @return {string}
+ */
+function relativePath(req) {
+  const pathname = decodeURI(url.parse(req.url).pathname);
+  if (!pathname || (pathname === '/' && req.originalUrl && !req.originalUrl.endsWith('/'))) {
+    // Polka (and others) give us "/" even though the originalUrl might be "/foo". Return a single
+    // relative dot so that we can know that we weren't properly terminated with "/".
+    return '.';
+  }
+  return '.' + pathname;
+}
+
+
+/**
  * Builds middleware that serves static files from the specified path, or the
  * current directory by default.
  *
@@ -23,9 +42,12 @@ function redirect(res, to) {
  *   cors: (boolean|undefined),
  *   serveLink: (boolean|undefined),
  *   listing: (boolean|undefined),
- * }} options
+ * }|string} options
  */
 function buildHandler(options) {
+  if (typeof options === 'string') {
+    options = {path: options};
+  }
   options = Object.assign({
     path: '.',
     cors: false,
@@ -55,33 +77,39 @@ function buildHandler(options) {
       return next();
     }
 
-    const pathname = decodeURI(url.parse(req.url).pathname);
-    if (!pathname.startsWith('/')) {  // node should prevent this, but sanity-check anyway
+    const realname = decodeURI(url.parse(req.originalUrl || req.url).pathname);
+    if (!realname.startsWith('/')) {  // node should prevent this, but sanity-check anyway
       res.writeHead(400);
       return res.end();
     }
 
     // Call normalize on the absolute pathname (e.g. "/../../foo" => "/foo"), to prevent abuse.
-    const normalized = path.posix.normalize(pathname);
-    if (pathname !== normalized) {
+    const normalized = path.posix.normalize(realname);
+    if (realname !== normalized) {
       return redirect(res, normalized);
     }
-    let filename = path.join(rootPath, '.', platform.posixToPlatform(pathname));
+
+    const pathname = relativePath(req);
+    let filename = path.join(rootPath, '.', platform.posixToPlatform(pathname));  // platform
 
     // Ensure the requested path is actually real, otherwise redirect to it. This behavior is the
     // default and is 'costly' in that we must call readlink a bunch and do some checks.
     if (redirectToLink) {
-      const real = await helper.realpathIn(rootPath, pathname);
+      const real = await helper.realpathIn(rootPath, pathname);  // platform
       if (real === null) {
         // can't escape via symlink
         res.writeHead(403);
         return res.end();
       }
       if (real !== filename) {
-        const hasTrailingSep = pathname.endsWith('/');
-        const rel = platform.platformToPosix(path.relative(rootPath, real));
-        const absolute = '/' + rel + (hasTrailingSep ? '/' : '');
-        return redirect(res, absolute);
+        const hasTrailingSlash = pathname.endsWith('/');
+        if (!hasTrailingSlash) {
+          // path.relative includes ".." even if the paths are in the same place
+          filename = path.dirname(filename);
+        }
+        // ... but does not include trailing '/' that we started with
+        const suffix = (hasTrailingSlash ? '/' : '');
+        return redirect(res, path.relative(filename, real) + suffix);
       }
     }
 
@@ -103,17 +131,17 @@ function buildHandler(options) {
         stat = indexStat;
 
       } else if (!pathname.endsWith('/')) {
-        // directory listings must end with /
-        const dir = path.posix.basename(pathname);
+        // directory listings must end with / (use realpath)
+        const dir = path.posix.basename(realname);
         return redirect(res, `${dir}/`);
 
       } else if (options.listing) {
         // list contents into simple HTML
-        const raw = await listing(filename, pathname);
+        const raw = await listing(filename, realname);
         const buffer = Buffer.from(raw, 'utf-8');
         res.setHeader('Content-Length', buffer.length);
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        readStream = await helper.createStringReadStream(buffer);
+        readStream = helper.createStringReadStream(buffer);
         stat = null;
 
       } else {
