@@ -81,6 +81,7 @@ module.exports = async (filename, rel) => {
 <head>
 <title>${he.encode(rel)}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="google" content="notranslate" />
 <style>
 body {
   font-family: Helvetica, Arial, Sans-Serif;
