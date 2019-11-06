@@ -73,11 +73,10 @@ async function bindAndStart() {
     // call our generated middleware and fail with 404 or 405
     handler(req, res, () => {
       let status = 404;
-  
+
       if (req.method !== 'GET' && req.method !== 'HEAD') {
         status = 405;
       }
-  
       res.writeHead(status);
       res.end();
     }).catch((err) => {

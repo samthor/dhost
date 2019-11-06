@@ -14,6 +14,46 @@ function redirect(res, to) {
 }
 
 
+function parseRange(rangeHeader, knownSize) {
+  const ranges = rangeHeader.split(/,\s+/g);
+  if (ranges.length !== 1) {
+    return null;
+  }
+
+  const singleRange = ranges[0];
+  if (!singleRange.startsWith('bytes=')) {
+    return null;
+  }
+  const actualRange = singleRange.substr('bytes='.length);
+  const parts = actualRange.split('-');
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  // nb. Both part values are non-negative, because we split on "-".
+
+  let start = 0;
+  let end = knownSize;
+
+  // e.g. "range=-500", return last 500 bytes
+  if (parts[1] && !parts[0]) {
+    start = Math.max(0, knownSize - parts[1]) || 0;
+  } else if (parts[0] && !parts[1]) {
+    start = Math.min(+parts[0] || 0, knownSize);
+  } else {
+    // nb. end is inclusive (for some reason)
+    start = Math.min(+parts[0] || 0, knownSize);
+    end = Math.min((+parts[1] + 1) || 0, knownSize);
+  }
+
+  if (start > end) {
+    console.info('got invalid range', start, end);
+    return null;
+  }
+  return {start, end}
+}
+
+
 /**
  * Returns the request path as a relative path, dealing with nuances while being
  * served under a different host (c.f. originalUrl). This will always return a
@@ -149,9 +189,38 @@ function buildHandler(options) {
       }
     }
 
+    // can't serve range requests for non-files
+    const isRangeRequest = 'range' in req.headers;
+    if (isRangeRequest && !stat) {
+      res.writeHead(416);
+      return res.end();
+    }
+
     // real file, tell the client about it
     if (stat) {
-      res.setHeader('Content-Length', stat.size);
+      let readOptions;
+
+      if (isRangeRequest) {
+        readOptions = parseRange(req.headers['range'], stat.size);
+
+        // 'Range' header was invalid or unsupported (e.g. multiple ranges)
+        if (!readOptions) {
+          res.writeHead(416);
+          return res.end();
+        }
+
+        let leftRange;
+        if (readOptions.start === 0 && readOptions.end === stat.size) {
+          leftRange = '*';  // the whole file is being requested
+        } else {
+          leftRange = `${readOptions.start}-${readOptions.end - 1}`;  // inclusive
+        }
+        res.setHeader('Content-Range', `bytes ${leftRange}/${stat.size}`);
+        res.setHeader('Content-Length', readOptions.end - readOptions.start);
+      } else {
+        res.setHeader('Content-Length', stat.size);
+      }
+
       const contentType = mime.getType(filename);
       if (contentType) {
         let extra = '';
@@ -160,6 +229,8 @@ function buildHandler(options) {
         }
         res.setHeader('Content-Type', contentType + extra);
       }
+
+      readStream = fs.createReadStream(filename, readOptions);
     }
 
     // don't create a readable stream, bail early (used for CORS)
@@ -168,11 +239,7 @@ function buildHandler(options) {
       return res.end();
     }
 
-    if (readStream === null) {
-      readStream = fs.createReadStream(filename);
-    }
-
-    readStream.on('open', () => res.writeHead(200));
+    readStream.on('open', () => res.writeHead(isRangeRequest ? 206 : 200));
     readStream.pipe(res);
 
     return new Promise((resolve, reject) => {
