@@ -39,8 +39,7 @@ module.exports = async (spec) => {
           reject(e);
         }
       });
-    });
-  
-  })
+    }).on('error', reject);
+  });
 };
 
