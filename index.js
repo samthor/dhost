@@ -189,6 +189,8 @@ function buildHandler(options) {
       }
     }
 
+    res.setHeader('Accept-Range', 'bytes');
+
     // can't serve range requests for non-files
     const isRangeRequest = 'range' in req.headers;
     if (isRangeRequest && !stat) {
@@ -205,17 +207,14 @@ function buildHandler(options) {
 
         // 'Range' header was invalid or unsupported (e.g. multiple ranges)
         if (!readOptions) {
+          res.setHeader('Content-Range', `bytes */${stat.size}`);
           res.writeHead(416);
           return res.end();
         }
 
-        let leftRange;
-        if (readOptions.start === 0 && readOptions.end === stat.size) {
-          leftRange = '*';  // the whole file is being requested
-        } else {
-          leftRange = `${readOptions.start}-${readOptions.end - 1}`;  // inclusive
-        }
-        res.setHeader('Content-Range', `bytes ${leftRange}/${stat.size}`);
+        // nb. left side is inclusive (1024 byte file will be "0-1023/1024")
+        res.setHeader('Content-Range',
+            `bytes ${readOptions.start}-${readOptions.end - 1}/${stat.size}`);
         res.setHeader('Content-Length', readOptions.end - readOptions.start);
       } else {
         res.setHeader('Content-Length', stat.size);
