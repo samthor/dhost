@@ -40,9 +40,8 @@ async function directoryContents(filename, hidden=false) {
     if (dirA !== dirB) {
       if (dirA) {
         return -1;
-      } else {
-        return +1;
       }
+      return +1;
     }
 
     // sort by name (Node does this on Linux but it's not guaranteed)

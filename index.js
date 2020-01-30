@@ -47,7 +47,6 @@ function parseRange(rangeHeader, knownSize) {
   }
 
   if (start > end) {
-    console.info('got invalid range', start, end);
     return null;
   }
   return {start, end}
@@ -96,21 +95,21 @@ function buildHandler(options) {
   }, options);
 
   const redirectToLink = !options.serveLink;
-  const rootPath = path.resolve(options.path);  // resolves symlinks
+  const rootPath = path.resolve(options.path);  // resolves symlinks in serving path
 
   // implicit headers
-  const headers = {
+  const defaultHeaders = {
     'Expires': '0',
     'Cache-Control': 'no-store',
   };
   if (options.cors) {
-    headers['Access-Control-Allow-Origin'] = '*';
+    defaultHeaders['Access-Control-Allow-Origin'] = '*';
   }
 
   return async (req, res, next) => {
     // send implicit never-cache headers
-    for (const key in headers) {
-      res.setHeader(key, headers[key]);
+    for (const key in defaultHeaders) {
+      res.setHeader(key, defaultHeaders[key]);
     }
 
     if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -161,7 +160,7 @@ function buildHandler(options) {
     let readStream = null;
 
     if (stat.isDirectory()) {
-      // check for dir/index.html and serve that
+      // check for <dir>/index.html and serve that
       const cand = path.join(filename, 'index.html');
       const indexStat = await helper.statOrNull(cand, redirectToLink);
 
@@ -212,7 +211,7 @@ function buildHandler(options) {
           return res.end();
         }
 
-        // nb. left side is inclusive (1024 byte file will be "0-1023/1024")
+        // nb. left side is inclusive (e.g., 128 byte file will be "0-127/128")
         res.setHeader('Content-Range',
             `bytes ${readOptions.start}-${readOptions.end - 1}/${stat.size}`);
         res.setHeader('Content-Length', readOptions.end - readOptions.start);
@@ -246,6 +245,6 @@ function buildHandler(options) {
       readStream.on('error', reject);
     });
   };
-};
+}
 
 module.exports = buildHandler;

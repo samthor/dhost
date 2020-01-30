@@ -12,8 +12,8 @@ const platform = require('./platform.js');
 function readlinkOrNull(filename) {
   return new Promise((r) => {
     fs.readlink(filename, (err, value) => r(err ? null : value));
-  })
-};
+  });
+}
 
 
 /**
@@ -40,7 +40,7 @@ async function reallink(filename) {
 
 /**
  * @param {string} filename
- * @return {!Array<string>} parts of 
+ * @return {!Array<string>} parts of filename
  */
 function splitPath(filename) {
   const parts = [];
@@ -54,7 +54,7 @@ function splitPath(filename) {
     parts.unshift(parsed.base);
   }
   return parts;
-};
+}
 
 
 /**
@@ -72,6 +72,7 @@ function createStringReadStream(raw) {
 /**
  * @param {string} root where results are valid within
  * @param {string} pathname within root, as per HTTP request
+ * @return {?string} resolved real path or null for invalid symlink
  */
 async function realpathIn(root, pathname) {
   const hasTrailingSep = pathname.endsWith(path.sep);

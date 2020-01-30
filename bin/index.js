@@ -145,7 +145,7 @@ bindAndStart().then((server) => {
   }
 
   const padSize = Math.min(80, localURL.length * 2);
-  console.info(''.padEnd(padSize, '-'))
+  console.info(''.padEnd(padSize, '-'));
 
   server.on('request', (req, res) => {
     const requestParts = [req.url];
