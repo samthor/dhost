@@ -23,9 +23,11 @@ Here are the exceptions:
 Run `dhost -h` for flags.
 By default, this hosts only on `localhost`, on the first available port 9000 or above, and copies the serving URL to your clipboard.
 
+If you need to serve CORS requests, run with `-c`.
+
 # Middleware
 
-This can be used as middleware. To serve the current directory—without caching—with Polka:
+This can be used as middleware. To serve the current directory—without caching—using [Polka](https://github.com/lukeed/polka):
 
 ```js
 const polka = require('polka');
