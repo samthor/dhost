@@ -1,11 +1,14 @@
 
-const fs = require('fs');
-const helper = require('./helper.js');
-const listing = require('./listing.js');
-const platform = require('./platform.js');
-const mime = require('mime');
-const path = require('path');
-const url = require('url');
+import fs from 'fs';
+import * as helper from './helper.js';
+import listing from './listing.js';
+import * as platform from './platform.js';
+import mime from 'mime';
+import path from 'path';
+import url from 'url';
+import moduleRewriter from 'module-rewriter';
+import stream from 'stream';
+import {createRequire} from 'module';
 
 
 function redirect(res, to) {
@@ -72,6 +75,45 @@ function relativePath(req) {
 }
 
 
+const resolveIgnore = /^(\w+:|)\.{0,2}\//;
+
+
+/**
+ * @param {string} importee being imported
+ * @param {string} importer being imported from
+ * @return {string|undefined}
+ */
+function resolveHelper(importee, importer) {
+  if (resolveIgnore.test(importee)) {
+    return;
+  }
+
+  const require = createRequire(importer);
+
+  let absolute = null;
+
+  let json = {};
+  try {
+    json = require(path.join(importee, 'package.json'));
+
+    // TODO(samthor): This awkwarness is because we can't repy on the ESM resolver yet.
+    if ((json['type'] === 'module' && json['main']) || json['module']) {
+      absolute = require.resolve(path.join(importee, json['module'] || json['main']));
+    }
+  } catch (e) {
+    absolute = require.resolve(importee);
+  }
+
+  if (absolute) {
+    let rel = path.relative(path.dirname(importer), absolute);
+    if (!resolveIgnore.test(rel)) {
+      rel = './' + rel;
+    }
+    return rel;
+  }
+}
+
+
 /**
  * Builds middleware that serves static files from the specified path, or the
  * current directory by default.
@@ -83,7 +125,7 @@ function relativePath(req) {
  *   listing: (boolean|undefined),
  * }|string} options
  */
-function buildHandler(options) {
+export default function buildHandler(options) {
   if (typeof options === 'string') {
     options = {path: options};
   }
@@ -92,7 +134,10 @@ function buildHandler(options) {
     cors: false,
     serveLink: false,
     listing: true,
+    module: false,
   }, options);
+
+  const rewriterPromise = options.module ? moduleRewriter(resolveHelper) : null;
 
   const redirectToLink = !options.serveLink;
   const rootPath = path.resolve(options.path);  // resolves symlinks in serving path
@@ -191,7 +236,7 @@ function buildHandler(options) {
     res.setHeader('Accept-Range', 'bytes');
 
     // can't serve range requests for non-files
-    const isRangeRequest = 'range' in req.headers;
+    let isRangeRequest = 'range' in req.headers;
     if (isRangeRequest && !stat) {
       res.writeHead(416);
       return res.end();
@@ -200,24 +245,6 @@ function buildHandler(options) {
     // real file, tell the client about it
     if (stat) {
       let readOptions;
-
-      if (isRangeRequest) {
-        readOptions = parseRange(req.headers['range'], stat.size);
-
-        // 'Range' header was invalid or unsupported (e.g. multiple ranges)
-        if (!readOptions) {
-          res.setHeader('Content-Range', `bytes */${stat.size}`);
-          res.writeHead(416);
-          return res.end();
-        }
-
-        // nb. left side is inclusive (e.g., 128 byte file will be "0-127/128")
-        res.setHeader('Content-Range',
-            `bytes ${readOptions.start}-${readOptions.end - 1}/${stat.size}`);
-        res.setHeader('Content-Length', readOptions.end - readOptions.start);
-      } else {
-        res.setHeader('Content-Length', stat.size);
-      }
 
       const contentType = mime.getType(filename);
       if (contentType) {
@@ -228,7 +255,39 @@ function buildHandler(options) {
         res.setHeader('Content-Type', contentType + extra);
       }
 
-      readStream = fs.createReadStream(filename, readOptions);
+      // TODO(samthor): This rewrite logic is awkwardly placed.
+      if (options.module && contentType === 'application/javascript') {
+        // TODO(samthor): duplicated from below
+        if (req.method === 'HEAD') {
+          res.writeHead(200);
+          return res.end();
+        }
+
+        const rewriter = await rewriterPromise;
+
+        readStream = rewriter(filename);
+        isRangeRequest = false;
+      } else {
+        readStream = fs.createReadStream(filename, readOptions);
+
+        if (isRangeRequest) {
+          readOptions = parseRange(req.headers['range'], stat.size);
+
+          // 'Range' header was invalid or unsupported (e.g. multiple ranges)
+          if (!readOptions) {
+            res.setHeader('Content-Range', `bytes */${stat.size}`);
+            res.writeHead(416);
+            return res.end();
+          }
+
+          // nb. left side is inclusive (e.g., 128 byte file will be "0-127/128")
+          res.setHeader('Content-Range',
+              `bytes ${readOptions.start}-${readOptions.end - 1}/${stat.size}`);
+          res.setHeader('Content-Length', readOptions.end - readOptions.start);
+        } else {
+          res.setHeader('Content-Length', stat.size);
+        }
+      }
     }
 
     // don't create a readable stream, bail early (used for CORS)
@@ -246,5 +305,3 @@ function buildHandler(options) {
     });
   };
 }
-
-module.exports = buildHandler;

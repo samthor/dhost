@@ -1,8 +1,8 @@
 
-const fs = require('fs');
-const he = require('he');
-const helper = require('./helper.js');
-const path = require('path');
+import fs from 'fs';
+import he from 'he';
+import * as helper from './helper.js';
+import path from 'path';
 
 
 /**
@@ -62,7 +62,7 @@ async function directoryContents(filename, hidden=false) {
  * @param {string} rel requested HTTP path
  * @return {string} generated HTML for directory listing
  */
-module.exports = async (filename, rel) => {
+export default async (filename, rel) => {
   const contents = await directoryContents(filename);
 
   if (rel !== '/') {

@@ -1,17 +1,20 @@
 #!/usr/bin/env node
 
-const buildHandler = require('../index.js');
-const bytes = require('bytes');
-const chalk = require('chalk');
-const check = require('./check.js');
-const clipboardy = require('clipboardy');
-const http = require('http');
-const mri = require('mri');
-const network = require('./network.js');
-const os = require('os');
-const path = require('path');
+import buildHandler from '../index.js';
+import bytes from 'bytes';
+import chalk from 'chalk';
+import clipboardy from 'clipboardy';
+import http from 'http';
+import mri from 'mri';
+import * as network from './network.js';
+import os from 'os';
+import path from 'path';
+import fs from 'fs';
 
-const spec = require('../package.json');
+
+// TODO(samthor): This is a bit gross in ESM.
+const specPath = path.join(path.dirname(import.meta.url.split(':')[1]), '..', 'package.json');
+const spec = JSON.parse(fs.readFileSync(specPath, 'utf-8'));
 
 
 const options = mri(process.argv.slice(2), {
@@ -31,6 +34,7 @@ const options = mri(process.argv.slice(2), {
     serveLink: ['l', 'serve-link'],
     bindAll: ['a', 'bind-all'],
     skipCheck: ['n', 'skip-check'],
+    module: 'm',
     help: 'h',
   },
   unknown: (v) => {
@@ -49,6 +53,7 @@ listing or any found "index.html" file.
 Options:
   -p, --port <n>       explicit serving port
   -c, --cors           whether to allow CORS requests
+  -m, --module         experimental ESM module rewriting for JS
   -l, --serve-link     serve symlink target (unsafe, allows escaping root)
   -a, --bind-all       listen on all network interfaces, not just localhost
   -n, --skip-check     don't check for an updated version of ${spec['name']}
@@ -91,7 +96,7 @@ async function bindAndStart() {
   let port = start;
 
   for (;;) {
-    server = http.createServer(internalHandler);
+    const server = http.createServer(internalHandler);
     server.listen({host, port});
 
     const ok = await new Promise((resolve) => {

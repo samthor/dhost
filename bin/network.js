@@ -1,7 +1,7 @@
-const os = require('os');
+import os from 'os';
 
 
-function localAddresses() {
+export function localAddresses() {
   const interfaces = os.networkInterfaces();
   const all = [];
 
@@ -33,7 +33,7 @@ function localAddresses() {
  * @param {string} address raw network address
  * @return {!Array<string>}
  */
-function mergeForwardedFor(forwardedFor, address) {
+export function mergeForwardedFor(forwardedFor, address) {
   const parts = (forwardedFor || '').split(',').map(formatRemoteAddress).filter((x) => x);
   address = formatRemoteAddress(address);
 
@@ -51,7 +51,7 @@ function mergeForwardedFor(forwardedFor, address) {
  * @param {string} address to format
  * @return {?string} formatted address, or null for localhost
  */
-function formatRemoteAddress(address) {
+export function formatRemoteAddress(address) {
   address = address.trim();
 
   if (address.startsWith('::ffff:')) {
@@ -64,10 +64,3 @@ function formatRemoteAddress(address) {
 
   return address;
 }
-
-
-module.exports = {
-  localAddresses,
-  mergeForwardedFor,
-  formatRemoteAddress,
-};

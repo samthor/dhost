@@ -1,8 +1,8 @@
 
-const stream = require('stream');
-const fs = require('fs');
-const path = require('path');
-const platform = require('./platform.js');
+import stream from 'stream';
+import fs from 'fs';
+import path from 'path';
+import * as platform from './platform.js';
 
 
 /**
@@ -61,7 +61,7 @@ function splitPath(filename) {
  * @param {string} raw string to push into readable stream
  * @return {!stream.Readable} stream of string
  */
-function createStringReadStream(raw) {
+export function createStringReadStream(raw) {
   const r = new stream.Readable();
   r.push(raw);
   r.push(null);
@@ -74,7 +74,7 @@ function createStringReadStream(raw) {
  * @param {string} pathname within root, as per HTTP request
  * @return {?string} resolved real path or null for invalid symlink
  */
-async function realpathIn(root, pathname) {
+export async function realpathIn(root, pathname) {
   const hasTrailingSep = pathname.endsWith(path.sep);
   const parts = splitPath(platform.posixToPlatform(path.posix.normalize(pathname)));
 
@@ -105,7 +105,7 @@ async function realpathIn(root, pathname) {
  * @param {boolean} lstat whether to use lstat
  * @return {?fs.Stats} stats or null for unknown file
  */
-async function statOrNull(filename, lstat=false) {
+export async function statOrNull(filename, lstat=false) {
   const method = lstat ? fs.lstat : fs.stat;
   return await new Promise((r) => {
     method(filename, (err, stats) => r(err ? null : stats));
@@ -132,9 +132,3 @@ function pathInRoot(root, cand) {
   return check.length === 0 || check === path.sep;
 }
 
-
-module.exports = {
-  createStringReadStream,
-  realpathIn,
-  statOrNull,
-};

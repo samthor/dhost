@@ -1,6 +1,6 @@
-const https = require('https');
+import https from 'https';
 
-module.exports = async (spec) => {
+export default async (spec) => {
   // TODO(samthor): This should use the configured registry, but it works for now.
   const url = `https://registry.npmjs.com/${spec['name']}/latest`;
   const localVersion = spec['version'];

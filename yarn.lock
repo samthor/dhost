@@ -113,6 +113,11 @@ mime@^2.4.0:
   resolved "https://registry.yarnpkg.com/mime/-/mime-2.4.0.tgz#e051fd881358585f3279df333fe694da0bcffdd6"
   integrity sha512-ikBcWwyqXQSHKtciCcctu9YfPbFYZ4+gbHEmE0Q8jzcTYQg5dHCr3g2wwAZjPoJfQVXZq6KXAjpXOTf5/cjT7w==
 
+module-rewriter@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/module-rewriter/-/module-rewriter-0.1.1.tgz#8fddb603af40dc60ab91323cf9017c103315276f"
+  integrity sha512-OSm4LvzQnDZh9PHIsjSL5FeOFmzqIYEwzYuZ1mTRwzXPD4PVKOAheVjXJD/8hwFMcfLtbHqDdloyibq7oj8nCw==
+
 mri@^1.1.4:
   version "1.1.4"
   resolved "https://registry.yarnpkg.com/mri/-/mri-1.1.4.tgz#7cb1dd1b9b40905f1fac053abe25b6720f44744a"
