@@ -32,6 +32,7 @@ const options = mri(process.argv.slice(2), {
     port: 'p',
     cors: 'c',
     serveLink: ['l', 'serve-link'],
+    serveHidden: ['d', 'serve-hidden'],
     bindAll: ['a', 'bind-all'],
     skipCheck: ['n', 'skip-check'],
     module: 'm',
@@ -55,6 +56,7 @@ Options:
   -c, --cors           whether to allow CORS requests
   -m, --module         experimental ESM module rewriting for JS
   -l, --serve-link     serve symlink target (unsafe, allows escaping root)
+  -d, --serve-hidden   serve hidden files (by default these 404)
   -a, --bind-all       listen on all network interfaces, not just localhost
   -n, --skip-check     don't check for an updated version of ${spec['name']}
 

@@ -122,6 +122,7 @@ function resolveHelper(importee, importer) {
  *   path: (string|undefined),
  *   cors: (boolean|undefined),
  *   serveLink: (boolean|undefined),
+ *   serveHidden: (boolean|undefined),
  *   listing: (boolean|undefined),
  * }|string} options
  */
@@ -133,6 +134,7 @@ export default function buildHandler(options) {
     path: '.',
     cors: false,
     serveLink: false,
+    serveHidden: false,
     listing: true,
     module: false,
   }, options);
@@ -174,6 +176,11 @@ export default function buildHandler(options) {
     }
 
     const pathname = relativePath(req);
+    if (!options.serveHidden && pathname.includes('/.')) {
+      res.writeHead(404);
+      return res.end();
+    }
+
     let filename = path.join(rootPath, '.', platform.posixToPlatform(pathname));  // platform
 
     // Ensure the requested path is actually real, otherwise redirect to it. This behavior is the
