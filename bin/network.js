@@ -1,4 +1,4 @@
-import os from 'os';
+import * as os from 'os';
 
 
 export function localAddresses() {
@@ -6,6 +6,7 @@ export function localAddresses() {
   const all = [];
 
   for (const ifname of Object.keys(interfaces)) {
+    // @ts-ignore
     for (const iface of interfaces[ifname]) {
       // hide internal or link-local v6
       if (iface.internal || iface.address.startsWith('fe80::')) {
@@ -31,7 +32,7 @@ export function localAddresses() {
 /**
  * @param {string} forwardedFor raw X-Forwarded-For header
  * @param {string} address raw network address
- * @return {!Array<string>}
+ * @return {string[]}
  */
 export function mergeForwardedFor(forwardedFor, address) {
   const parts = (forwardedFor || '').split(',').map(formatRemoteAddress).filter((x) => x);
@@ -49,7 +50,7 @@ export function mergeForwardedFor(forwardedFor, address) {
 
 /**
  * @param {string} address to format
- * @return {?string} formatted address, or null for localhost
+ * @return {string} formatted address, or empty for localhost
  */
 export function formatRemoteAddress(address) {
   address = address.trim();
@@ -59,7 +60,7 @@ export function formatRemoteAddress(address) {
   }
 
   if (address === '::1' || address === '127.0.0.1') {
-    return null;  // localhost
+    return '';  // localhost
   }
 
   return address;

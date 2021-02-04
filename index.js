@@ -1,14 +1,14 @@
 
-import fs from 'fs';
+import * as fs from 'fs';
 import * as helper from './helper.js';
 import listing from './listing.js';
 import * as platform from './platform.js';
 import mime from 'mime';
-import path from 'path';
-import url from 'url';
-import moduleRewriter from 'module-rewriter';
-import stream from 'stream';
-import {createRequire} from 'module';
+import * as path from 'path';
+import * as http from 'http';
+import buildModuleRewriter from 'gumnut/imports';
+import * as types from './types/index.js';
+import * as stream from 'stream';
 
 
 function redirect(res, to) {
@@ -61,11 +61,11 @@ function parseRange(rangeHeader, knownSize) {
  * served under a different host (c.f. originalUrl). This will always return a
  * string that begins with '.'.
  *
- * @param {!http.IncomingMessage} req
+ * @param {types.IncomingMessage} req
  * @return {string}
  */
 function relativePath(req) {
-  const pathname = decodeURI(url.parse(req.url).pathname);
+  const pathname = decodeURI(req.url || '/');
   if (!pathname || (pathname === '/' && req.originalUrl && !req.originalUrl.endsWith('/'))) {
     // Polka (and others) give us "/" even though the originalUrl might be "/foo". Return a single
     // relative dot so that we can know that we weren't properly terminated with "/".
@@ -75,71 +75,39 @@ function relativePath(req) {
 }
 
 
-const resolveIgnore = /^(\w+:|)\.{0,2}\//;
+/** @type {((f: string) => stream.Readable) | null} */
+let moduleRewriter = null;
 
+/** @type {Promise<void>|null} */
+let moduleRewriterPromise = null;
 
-/**
- * @param {string} importee being imported
- * @param {string} importer being imported from
- * @return {string|undefined}
- */
-function resolveHelper(importee, importer) {
-  if (resolveIgnore.test(importee)) {
-    return;
-  }
-
-  const require = createRequire(importer);
-
-  let absolute = null;
-
-  let json = {};
-  try {
-    json = require(path.join(importee, 'package.json'));
-
-    // TODO(samthor): This awkwarness is because we can't repy on the ESM resolver yet.
-    if ((json['type'] === 'module' && json['main']) || json['module']) {
-      absolute = require.resolve(path.join(importee, json['module'] || json['main']));
-    }
-  } catch (e) {
-    absolute = require.resolve(importee);
-  }
-
-  if (absolute) {
-    let rel = path.relative(path.dirname(importer), absolute);
-    if (!resolveIgnore.test(rel)) {
-      rel = './' + rel;
-    }
-    return rel;
-  }
-}
 
 
 /**
  * Builds middleware that serves static files from the specified path, or the
  * current directory by default.
  *
- * @param {{
- *   path: (string|undefined),
- *   cors: (boolean|undefined),
- *   serveLink: (boolean|undefined),
- *   serveHidden: (boolean|undefined),
- *   listing: (boolean|undefined),
- * }|string} options
+ * @param {types.Options|string} rawOptions
  */
-export default function buildHandler(options) {
-  if (typeof options === 'string') {
-    options = {path: options};
+export default function buildHandler(rawOptions) {
+  if (typeof rawOptions === 'string') {
+    rawOptions = {path: rawOptions};
   }
-  options = Object.assign({
+  /** @type {types.Options} */
+  const options = Object.assign({
     path: '.',
     cors: false,
     serveLink: false,
     serveHidden: false,
     listing: true,
     module: false,
-  }, options);
+  }, rawOptions);
 
-  const rewriterPromise = options.module ? moduleRewriter(resolveHelper) : null;
+  if (!moduleRewriterPromise && options.module) {
+    moduleRewriterPromise = Promise.resolve().then(async () => {
+      moduleRewriter = await buildModuleRewriter();
+    });
+  }
 
   const redirectToLink = !options.serveLink;
   const rootPath = path.resolve(options.path);  // resolves symlinks in serving path
@@ -153,7 +121,14 @@ export default function buildHandler(options) {
     defaultHeaders['Access-Control-Allow-Origin'] = '*';
   }
 
-  return async (req, res, next) => {
+  /**
+   * @param {http.IncomingMessage} r
+   * @param {http.ServerResponse} res
+   * @param {() => void} next
+   */
+  const handler = async (r, res, next) => {
+    const req = /** @type {types.IncomingMessage} */ (r);
+
     // send implicit never-cache headers
     for (const key in defaultHeaders) {
       res.setHeader(key, defaultHeaders[key]);
@@ -163,7 +138,7 @@ export default function buildHandler(options) {
       return next();
     }
 
-    const realname = decodeURI(url.parse(req.originalUrl || req.url).pathname);
+    const realname = decodeURI(req.originalUrl || req.url || '/');
     if (!realname.startsWith('/')) {  // node should prevent this, but sanity-check anyway
       res.writeHead(400);
       return res.end();
@@ -209,7 +184,8 @@ export default function buildHandler(options) {
       return next();  // file doesn't exist
     }
 
-    let readStream = null;
+    /** @type {stream.Readable} */
+    let readStream;
 
     if (stat.isDirectory()) {
       // check for <dir>/index.html and serve that
@@ -262,17 +238,16 @@ export default function buildHandler(options) {
         res.setHeader('Content-Type', contentType + extra);
       }
 
-      // TODO(samthor): This rewrite logic is awkwardly placed.
-      if (options.module && contentType === 'application/javascript') {
+      // TODO(samthor): This rewrite logic is awkwardly placed. We also don't rewrite until it's
+      // actually ready.
+      if (options.module && moduleRewriter && contentType === 'application/javascript') {
         // TODO(samthor): duplicated from below
         if (req.method === 'HEAD') {
           res.writeHead(200);
           return res.end();
         }
 
-        const rewriter = await rewriterPromise;
-
-        readStream = rewriter(filename);
+        readStream = moduleRewriter(filename);
         isRangeRequest = false;
       } else {
         readStream = fs.createReadStream(filename, readOptions);
@@ -303,7 +278,10 @@ export default function buildHandler(options) {
       return res.end();
     }
 
+    // TODO(samthor): TS thinks this isn't defined here.
+    // @ts-ignore
     readStream.on('open', () => res.writeHead(isRangeRequest ? 206 : 200));
+    // @ts-ignore
     readStream.pipe(res);
 
     return new Promise((resolve, reject) => {
@@ -311,4 +289,5 @@ export default function buildHandler(options) {
       readStream.on('error', reject);
     });
   };
+  return handler;
 }

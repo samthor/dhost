@@ -17,7 +17,7 @@ Here are the exceptions:
 * We serve `index.html` if found, or generate a simple directory listing otherwise
 * Symlinks generate a 302 to their target file if it's within the root (serve contents instead via flag)
 * No data is served for other status codes (i.e., your browser will render its own 404 page)
-* Specify `-m` for experimental module rewriting mode for ESM imports (e.g., "foo" => "/node_modules/foo/index.js")
+* Specify `-m` to rewrite your JS to include ESM imports (e.g., "viz-observer" => "/node_modules/viz-observer/index.js")
 
 # Running
 
@@ -49,7 +49,7 @@ Needed for the middleware only:
 
 * `he` escapes names in generated directory listing
 * `mime` guesses mime-types for the `Content-Type` header
-* `module-rewriter` for experimental module rewriting support
+* `gumnut` for module rewriting support
 
 Included for the CLI:
 

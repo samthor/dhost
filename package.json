@@ -1,6 +1,6 @@
 {
   "name": "dhost",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "description": "Never-caching development Node webserver",
   "homepage": "https://github.com/samthor/dhost",
@@ -12,10 +12,13 @@
     "bytes": "^3.1.0",
     "chalk": "^2.4.2",
     "clipboardy": "^1.2.3",
+    "gumnut": "^0.1.4",
     "he": "^1.2.0",
     "mime": "^2.4.0",
-    "module-rewriter": "^0.1.1",
     "mri": "^1.1.4"
   },
-  "bin": "./bin/index.js"
+  "bin": "./bin/index.js",
+  "devDependencies": {
+    "@types/node": "^14.14.24"
+  }
 }

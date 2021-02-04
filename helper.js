@@ -1,13 +1,13 @@
 
-import stream from 'stream';
-import fs from 'fs';
-import path from 'path';
+import * as stream from 'stream';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as platform from './platform.js';
 
 
 /**
  * @param {string} filename to read
- * @return {?string} link value of filename, or null for nonexistent/invalid
+ * @return {Promise<string|null>} link value of filename, or null for nonexistent/invalid
  */
 function readlinkOrNull(filename) {
   return new Promise((r) => {
@@ -20,7 +20,7 @@ function readlinkOrNull(filename) {
  * As per `fs.realpath`, but only operates on the last segment of the filename.
  *
  * @param {string} filename to resolve
- * @return {string} resolved filename
+ * @return {Promise<string>} resolved filename
  */
 async function reallink(filename) {
   let curr = filename;
@@ -58,7 +58,7 @@ function splitPath(filename) {
 
 
 /**
- * @param {string} raw string to push into readable stream
+ * @param {string|Buffer} raw string to push into readable stream
  * @return {!stream.Readable} stream of string
  */
 export function createStringReadStream(raw) {
@@ -72,7 +72,7 @@ export function createStringReadStream(raw) {
 /**
  * @param {string} root where results are valid within
  * @param {string} pathname within root, as per HTTP request
- * @return {?string} resolved real path or null for invalid symlink
+ * @return {Promise<string|null>} resolved real path or null for invalid symlink
  */
 export async function realpathIn(root, pathname) {
   const hasTrailingSep = pathname.endsWith(path.sep);
@@ -103,7 +103,7 @@ export async function realpathIn(root, pathname) {
 /**
  * @param {string} filename to stat
  * @param {boolean} lstat whether to use lstat
- * @return {?fs.Stats} stats or null for unknown file
+ * @return {Promise<fs.Stats|null>} stats or null for unknown file
  */
 export async function statOrNull(filename, lstat=false) {
   const method = lstat ? fs.lstat : fs.stat;

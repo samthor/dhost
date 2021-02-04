@@ -4,16 +4,16 @@ import buildHandler from '../index.js';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import clipboardy from 'clipboardy';
-import http from 'http';
+import * as http from 'http';
 import mri from 'mri';
 import * as network from './network.js';
-import os from 'os';
-import path from 'path';
-import fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import * as fs from 'fs';
+import check from './check.js';
 
 
-// TODO(samthor): This is a bit gross in ESM.
-const specPath = path.join(path.dirname(import.meta.url.split(':')[1]), '..', 'package.json');
+const {pathname: specPath} = new URL('../package.json', import.meta.url);
 const spec = JSON.parse(fs.readFileSync(specPath, 'utf-8'));
 
 
@@ -54,7 +54,7 @@ listing or any found "index.html" file.
 Options:
   -p, --port <n>       explicit serving port
   -c, --cors           whether to allow CORS requests
-  -m, --module         experimental ESM module rewriting for JS
+  -m, --module         rewrite JS to include ESM imports
   -l, --serve-link     serve symlink target (unsafe, allows escaping root)
   -d, --serve-hidden   serve hidden files (by default these 404)
   -a, --bind-all       listen on all network interfaces, not just localhost
@@ -126,6 +126,9 @@ async function bindAndStart() {
 
 bindAndStart().then((server) => {
   const serverAddress = server.address();
+  if (!serverAddress || !(typeof serverAddress === 'object')) {
+    throw new Error(`could not find serverAddress: ${serverAddress}`);
+  }
   const localURL = `http://localhost:${serverAddress.port}`;
 
   let clipboardError = null;

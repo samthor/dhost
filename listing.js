@@ -1,14 +1,14 @@
 
-import fs from 'fs';
+import * as fs from 'fs';
 import he from 'he';
 import * as helper from './helper.js';
-import path from 'path';
+import * as path from 'path';
 
 
 /**
  * @param {string} filename
  * @param {boolean=} hidden whether to include hidden files
- * @return {!Array<string>} contents of directory
+ * @return {Promise<string[]>} contents of directory
  */
 async function directoryContents(filename, hidden=false) {
   let listing = await new Promise((resolve, reject) => {
@@ -60,7 +60,7 @@ async function directoryContents(filename, hidden=false) {
 /**
  * @param {string} filename to readdir on
  * @param {string} rel requested HTTP path
- * @return {string} generated HTML for directory listing
+ * @return {Promise<string>} generated HTML for directory listing
  */
 export default async (filename, rel) => {
   const contents = await directoryContents(filename);

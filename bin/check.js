@@ -1,4 +1,4 @@
-import https from 'https';
+import * as https from 'https';
 
 export default async (spec) => {
   // TODO(samthor): This should use the configured registry, but it works for now.

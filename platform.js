@@ -1,5 +1,5 @@
 
-import path from 'path';
+import * as path from 'path';
 const isPosix = (path.sep === path.posix.sep);
 
 const noop = (x) => x;
