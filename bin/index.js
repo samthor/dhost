@@ -2,7 +2,7 @@
 
 import buildHandler from '../index.js';
 import bytes from 'bytes';
-import chalk from 'chalk';
+import * as color from 'colorette';
 import clipboardy from 'clipboardy';
 import * as http from 'http';
 import mri from 'mri';
@@ -87,7 +87,7 @@ async function bindAndStart() {
       res.writeHead(status);
       res.end();
     }).catch((err) => {
-      console.info(chalk.red('!'), err);
+      console.info(color.red('!'), err);
       res.writeHead(500);
       res.end();
     });
@@ -139,8 +139,8 @@ bindAndStart().then((server) => {
     clipboardError = e;
   }
 
-  console.info(chalk.blue('*'), 'Serving static files from', chalk.cyan(path.resolve(options.path)));
-  console.info(chalk.blue('*'), 'Local', chalk.green(localURL), clipboardError ? chalk.red('(could not copy to clipboard)') : chalk.dim('(on your clipboard!)'));
+  console.info(color.blue('*'), 'Serving static files from', color.cyan(path.resolve(options.path)));
+  console.info(color.blue('*'), 'Local', color.green(localURL), clipboardError ? color.red('(could not copy to clipboard)') : color.dim('(on your clipboard!)'));
 
   if (options.bindAll) {
     // log all IP addresses we're listening on
@@ -150,7 +150,7 @@ bindAndStart().then((server) => {
       if (family === 'IPv6') {
         display = `[${display}]`;
       }
-      console.info(chalk.blue('*'), 'Network', chalk.green(`http://${display}:${serverAddress.port}`));
+      console.info(color.blue('*'), 'Network', color.green(`http://${display}:${serverAddress.port}`));
     });
   }
 
@@ -163,17 +163,17 @@ bindAndStart().then((server) => {
     const forwardedFor = req.headers['x-forwarded-for'] || '';
     const remoteAddresses = network.mergeForwardedFor(forwardedFor, req.socket.remoteAddress);
     for (const remoteAddress of remoteAddresses) {
-      requestParts.push(chalk.gray(remoteAddress));  // display remote addr for non-localhost
+      requestParts.push(color.gray(remoteAddress));  // display remote addr for non-localhost
     }
 
-    console.info(chalk.gray('>'), chalk.cyan(req.method), requestParts.join(' '));
+    console.info(color.gray('>'), color.cyan(req.method), requestParts.join(' '));
     const start = process.hrtime();
 
     res.on('finish', () => {
       const duration = process.hrtime(start);
       const ms = ((duration[0] + (duration[1] / 1e9)) * 1e3).toFixed(3);
 
-      const responseColor = res.statusCode >= 400 ? chalk.red : chalk.green;
+      const responseColor = res.statusCode >= 400 ? color.red : color.green;
       const responseParts = [responseColor(res.statusCode), responseColor(res.statusMessage)];
 
       // Render the served URL, or the 3xx 'Location' field
@@ -189,7 +189,7 @@ bindAndStart().then((server) => {
         }
       }
       responseParts.push(url);
-      responseParts.push(chalk.dim(`${ms}ms`));
+      responseParts.push(color.dim(`${ms}ms`));
 
       // Content-Length is only set by user code, not by Node, so it might not always exist
       const contentLength = res.getHeader('Content-Length');
@@ -198,7 +198,7 @@ bindAndStart().then((server) => {
         responseParts.push(displayBytes);
       }
 
-      console.info(chalk.gray('<'), responseParts.join(' '));
+      console.info(color.gray('<'), responseParts.join(' '));
     });
   });
 
@@ -229,7 +229,7 @@ bindAndStart().then((server) => {
 
   process.on('exit', () => {
     console.info();
-    console.info(`${chalk.bold(spec['name'])} upgrade available (latest ${chalk.green(latestVersion)}, installed ${chalk.red(spec['version'])})`);
+    console.info(`${color.bold(spec['name'])} upgrade available (latest ${color.green(latestVersion)}, installed ${color.red(spec['version'])})`);
   });
 
 }()).catch((err) => {

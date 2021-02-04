@@ -17,7 +17,7 @@ Here are the exceptions:
 * We serve `index.html` if found, or generate a simple directory listing otherwise
 * Symlinks generate a 302 to their target file if it's within the root (serve contents instead via flag)
 * No data is served for other status codes (i.e., your browser will render its own 404 page)
-* Specify `-m` to rewrite your JS to include ESM imports (e.g., "viz-observer" => "/node_modules/viz-observer/index.js")
+* ✨ New! ✨ Specify `-m` to rewrite your JS to include ESM imports (e.g., "viz-observer" => "/node_modules/viz-observer/index.js")
 
 # Running
 
@@ -28,7 +28,8 @@ If you need to serve CORS requests, run with `-c`.
 
 # Middleware
 
-This can be used as middleware. To serve the current directory—without caching—using [Polka](https://github.com/lukeed/polka):
+This can be used as middleware.
+To serve the current directory—without caching—using [Polka](https://github.com/lukeed/polka):
 
 ```js
 const polka = require('polka');
@@ -54,6 +55,9 @@ Needed for the middleware only:
 Included for the CLI:
 
 * `bytes` displays nicely-formatted download sizes
-* `chalk` for color output
+* `colorette` for color output
 * `clipboardy` copies webserver address to clipboard on start
 * `mri` parses command-line arguments
+
+Out of all these dependencies, only `clipboardy` has further dependencies.
+(Do you have a suggestion for an alternative?)
