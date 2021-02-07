@@ -184,7 +184,11 @@ bindAndStart().then((server) => {
           if (path.isAbsolute(location)) {
             url = location;
           } else {
-            url = path.join(req.url, location);
+            let base = req.url;
+            if (base.endsWith('/')) {
+              base += '.';
+            }
+            url = path.join(path.dirname(base), location);
           }
         }
       }
