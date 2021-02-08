@@ -50,7 +50,8 @@ Needed for the middleware only:
 
 * `he` escapes names in generated directory listing
 * `mime` guesses mime-types for the `Content-Type` header
-* `gumnut` for module rewriting support
+* `gumnut` for ESM rewriting support
+* `esm-resolve` for resolving imports
 
 Included for the CLI:
 

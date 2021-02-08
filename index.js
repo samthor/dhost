@@ -9,6 +9,7 @@ import * as http from 'http';
 import buildModuleRewriter from 'gumnut/imports';
 import * as types from './types/index.js';
 import * as stream from 'stream';
+import buildResolver from 'esm-resolve';
 
 
 function redirect(res, to) {
@@ -105,7 +106,7 @@ export default function buildHandler(rawOptions) {
 
   if (!moduleRewriterPromise && options.module) {
     moduleRewriterPromise = Promise.resolve().then(async () => {
-      moduleRewriter = await buildModuleRewriter();
+      moduleRewriter = await buildModuleRewriter(buildResolver);
     });
   }
 
@@ -238,8 +239,8 @@ export default function buildHandler(rawOptions) {
         res.setHeader('Content-Type', contentType + extra);
       }
 
-      // TODO(samthor): This rewrite logic is awkwardly placed. We also don't rewrite until it's
-      // actually ready.
+      // TODO(samthor): This rewrite logic is awkwardly placed. We also don't rewrite until the
+      // rewriter is ready, as it loads async.
       if (options.module && moduleRewriter && contentType === 'application/javascript') {
         // TODO(samthor): duplicated from below
         if (req.method === 'HEAD') {
