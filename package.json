@@ -1,6 +1,6 @@
 {
   "name": "dhost",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "type": "module",
   "description": "Never-caching development Node webserver",
   "homepage": "https://github.com/samthor/dhost",
@@ -13,7 +13,7 @@
     "clipboardy": "^2.3.0",
     "colorette": "^1.2.1",
     "esm-resolve": "^1.0.2",
-    "gumnut": "^0.2.0",
+    "gumnut": "^0.2.2",
     "he": "^1.2.0",
     "mime": "^2.4.0",
     "mri": "^1.1.4"
