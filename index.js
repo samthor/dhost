@@ -76,7 +76,7 @@ function relativePath(req) {
 }
 
 
-/** @type {((f: string) => stream.Readable) | null} */
+/** @type {((f: string, write: (part: Uint8Array) => void) => void) | null} */
 let moduleRewriter = null;
 
 /** @type {Promise<void>|null} */
@@ -242,34 +242,45 @@ export default function buildHandler(rawOptions) {
       // TODO(samthor): This rewrite logic is awkwardly placed. We also don't rewrite until the
       // rewriter is ready, as it loads async.
       if (options.module && moduleRewriter && contentType === 'application/javascript') {
-        // TODO(samthor): duplicated from below
         if (req.method === 'HEAD') {
           res.writeHead(200);
           return res.end();
         }
 
-        readStream = moduleRewriter(filename);
-        isRangeRequest = false;
-      } else {
-        readStream = fs.createReadStream(filename, readOptions);
-
-        if (isRangeRequest) {
-          readOptions = parseRange(req.headers['range'], stat.size);
-
-          // 'Range' header was invalid or unsupported (e.g. multiple ranges)
-          if (!readOptions) {
-            res.setHeader('Content-Range', `bytes */${stat.size}`);
-            res.writeHead(416);
-            return res.end();
-          }
-
-          // nb. left side is inclusive (e.g., 128 byte file will be "0-127/128")
-          res.setHeader('Content-Range',
-              `bytes ${readOptions.start}-${readOptions.end - 1}/${stat.size}`);
-          res.setHeader('Content-Length', readOptions.end - readOptions.start);
-        } else {
-          res.setHeader('Content-Length', stat.size);
+        // TODO(samthor): This has to fetch all parts to make sure we don't crash. In the medium
+        // term, the rewriter should announce where in the source file it got up to, so we can send
+        // the remaining source unmodified.
+        const parts = [];
+        try {
+          moduleRewriter(filename, (part) => parts.push(part));
+        } catch (e) {
+          res.writeHead(500);
+          return res.end();
         }
+
+        const length = parts.reduce((length, part) => length + part.length, 0);
+        res.setHeader('Content-Length', length);
+        parts.forEach((part) => res.write(part));
+        return res.end();
+      }
+
+      readStream = fs.createReadStream(filename, readOptions);
+      if (isRangeRequest) {
+        readOptions = parseRange(req.headers['range'], stat.size);
+
+        // 'Range' header was invalid or unsupported (e.g. multiple ranges)
+        if (!readOptions) {
+          res.setHeader('Content-Range', `bytes */${stat.size}`);
+          res.writeHead(416);
+          return res.end();
+        }
+
+        // nb. left side is inclusive (e.g., 128 byte file will be "0-127/128")
+        res.setHeader('Content-Range',
+            `bytes ${readOptions.start}-${readOptions.end - 1}/${stat.size}`);
+        res.setHeader('Content-Length', readOptions.end - readOptions.start);
+      } else {
+        res.setHeader('Content-Length', stat.size);
       }
     }
 

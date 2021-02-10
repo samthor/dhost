@@ -62,9 +62,12 @@ function splitPath(filename) {
  * @return {!stream.Readable} stream of string
  */
 export function createStringReadStream(raw) {
-  const r = new stream.Readable();
-  r.push(raw);
-  r.push(null);
+  const r = new stream.Readable({
+    read() {
+      r.push(raw);
+      r.push(null);
+    },
+  });
   return r;
 }
 
