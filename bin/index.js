@@ -3,7 +3,6 @@
 import buildHandler from '../index.js';
 import bytes from 'bytes';
 import * as color from 'colorette';
-import clipboardy from 'clipboardy';
 import * as http from 'http';
 import mri from 'mri';
 import * as network from './network.js';
@@ -11,6 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import check from './check.js';
+import {copyToClipboard} from './clipboard.js';
 
 
 const {pathname: specPath} = new URL('../package.json', import.meta.url);
@@ -133,8 +133,8 @@ bindAndStart().then((server) => {
 
   let clipboardError = null;
   try {
-    // Clipboardy can fail on headless Linux systems (possibly others).
-    clipboardy.writeSync(localURL);
+    // Copying to clipboard can fail on headless Linux systems (possibly others).
+    copyToClipboard(localURL);
   } catch (e) {
     clipboardError = e;
   }

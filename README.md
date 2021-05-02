@@ -22,7 +22,7 @@ Here are the exceptions:
 # Running
 
 Run `dhost -h` for flags.
-By default, this hosts only on `localhost`, on the first available port 9000 or above, and copies the serving URL to your clipboard.
+By default, this hosts only on `localhost`, on the first available port 9000 or above, and copies the serving URL to your clipboard (on macOS, _or_ if `clipboardy` is found).
 
 If you need to serve CORS requests, run with `-c`.
 
@@ -44,7 +44,7 @@ polka()
 
 # Dependencies
 
-This package has just a handful of direct dependencies.
+This package has just a handful of dependencies, none of which have further dependencies.
 
 Needed for the middleware only:
 
@@ -57,8 +57,4 @@ Included for the CLI:
 
 * `bytes` displays nicely-formatted download sizes
 * `colorette` for color output
-* `clipboardy` copies webserver address to clipboard on start
 * `mri` parses command-line arguments
-
-Out of all these dependencies, only `clipboardy` has further dependencies.
-(Do you have a suggestion for an alternative?)
