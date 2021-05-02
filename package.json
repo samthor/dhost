@@ -12,7 +12,7 @@
     "bytes": "^3.1.0",
     "clipboardy": "^2.3.0",
     "colorette": "^1.2.1",
-    "esm-resolve": "^1.0.2",
+    "esm-resolve": "^1.0.3",
     "gumnut": "^0.3.1",
     "he": "^1.2.0",
     "mime": "^2.4.0",
