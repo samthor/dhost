@@ -12,26 +12,35 @@ import * as stream from 'stream';
 import buildResolver from 'esm-resolve';
 
 
+/**
+ * @param {http.ServerResponse} res
+ * @param {string} to
+ */
 function redirect(res, to) {
   res.writeHead(302, {'Location': to});
   return res.end();
 }
 
 
+/**
+ * @param {string} rangeHeader
+ * @param {number} knownSize
+ * @return {{start: number, end: number}=}
+ */
 function parseRange(rangeHeader, knownSize) {
   const ranges = rangeHeader.split(/,\s+/g);
   if (ranges.length !== 1) {
-    return null;
+    return;
   }
 
   const singleRange = ranges[0];
   if (!singleRange.startsWith('bytes=')) {
-    return null;
+    return;
   }
   const actualRange = singleRange.substr('bytes='.length);
   const parts = actualRange.split('-');
   if (parts.length !== 2) {
-    return null;
+    return;
   }
 
   // nb. Both part values are non-negative, because we split on "-".
@@ -41,7 +50,7 @@ function parseRange(rangeHeader, knownSize) {
 
   // e.g. "range=-500", return last 500 bytes
   if (parts[1] && !parts[0]) {
-    start = Math.max(0, knownSize - parts[1]) || 0;
+    start = Math.max(0, knownSize - +parts[1]) || 0;
   } else if (parts[0] && !parts[1]) {
     start = Math.min(+parts[0] || 0, knownSize);
   } else {
@@ -51,16 +60,15 @@ function parseRange(rangeHeader, knownSize) {
   }
 
   if (start > end) {
-    return null;
+    return;
   }
   return {start, end}
 }
 
 
 /**
- * Returns the request path as a relative path, dealing with nuances while being
- * served under a different host (c.f. originalUrl). This will always return a
- * string that begins with '.'.
+ * Returns the request path as a relative path, dealing with nuances while being served under a
+ * different host (c.f. originalUrl). This will always return a string that begins with '.'.
  *
  * @param {types.IncomingMessage} req
  * @return {string}
@@ -85,10 +93,10 @@ let moduleRewriterPromise = null;
 
 
 /**
- * Builds middleware that serves static files from the specified path, or the
- * current directory by default.
+ * Builds middleware that serves static files from the specified path, or the current directory by
+ * default.
  *
- * @param {types.Options|string} rawOptions
+ * @param {Partial<types.Options>|string} rawOptions
  */
 export default function buildHandler(rawOptions) {
   if (typeof rawOptions === 'string') {
@@ -114,6 +122,7 @@ export default function buildHandler(rawOptions) {
   const rootPath = path.resolve(options.path);  // resolves symlinks in serving path
 
   // implicit headers
+  /** @type {{[key: string]: string}} */
   const defaultHeaders = {
     'Expires': '0',
     'Cache-Control': 'no-store',
@@ -228,7 +237,8 @@ export default function buildHandler(rawOptions) {
 
     // real file, tell the client about it
     if (stat) {
-      let readOptions;
+      /** @type {{start: number, end: number}=} */
+      let readOptions = undefined;
 
       const contentType = mime.getType(filename);
       if (contentType) {
@@ -250,6 +260,7 @@ export default function buildHandler(rawOptions) {
         // TODO(samthor): This has to fetch all parts to make sure we don't crash. In the medium
         // term, the rewriter should announce where in the source file it got up to, so we can send
         // the remaining source unmodified.
+        /** @type {Uint8Array[]} */
         const parts = [];
         try {
           moduleRewriter(filename, (part) => parts.push(part));
@@ -266,7 +277,7 @@ export default function buildHandler(rawOptions) {
 
       readStream = fs.createReadStream(filename, readOptions);
       if (isRangeRequest) {
-        readOptions = parseRange(req.headers['range'], stat.size);
+        readOptions = parseRange(req.headers['range'] || '', stat.size);
 
         // 'Range' header was invalid or unsupported (e.g. multiple ranges)
         if (!readOptions) {

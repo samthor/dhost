@@ -1,5 +1,8 @@
 import * as https from 'https';
 
+/**
+ * @param {{name: string, version: string}} spec
+ */
 export default async (spec) => {
   // TODO(samthor): This should use the configured registry, but it works for now.
   const url = `https://registry.npmjs.com/${spec['name']}/latest`;
@@ -9,6 +12,9 @@ export default async (spec) => {
   }
 
   return new Promise((resolve, reject) => {
+    /**
+     * @param {{version: string}} def
+     */
     const handleRemote = (def) => {
       const remoteVersion = def['version'];
 

@@ -9,6 +9,7 @@ import * as network from './network.js';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as types from '../types/index.js';
 import check from './check.js';
 import {copyToClipboard} from './clipboard.js';
 
@@ -67,15 +68,23 @@ v${spec['version']}
   process.exit(0);
 }
 
-
 if (typeof options.port !== 'number') {
   options.port = null;
 }
 options.path = options._[0] || '.';
-const handler = buildHandler(options);
+
+
+/** @type {Partial<types.Options>} */
+const o = {};
+Object.assign(o, options);
+const handler = buildHandler(o);
 
 
 async function bindAndStart() {
+  /**
+   * @param {http.IncomingMessage} req
+   * @param {http.ServerResponse} res
+   */
   const internalHandler = (req, res) => {
     // call our generated middleware and fail with 404 or 405
     handler(req, res, () => {

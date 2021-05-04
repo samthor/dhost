@@ -40,7 +40,7 @@ async function reallink(filename) {
 
 /**
  * @param {string} filename
- * @return {!Array<string>} parts of filename
+ * @return {string[]} parts of filename
  */
 function splitPath(filename) {
   const parts = [];
@@ -59,7 +59,7 @@ function splitPath(filename) {
 
 /**
  * @param {string|Buffer} raw string to push into readable stream
- * @return {!stream.Readable} stream of string
+ * @return {stream.Readable} stream of string
  */
 export function createStringReadStream(raw) {
   const r = new stream.Readable({
@@ -106,7 +106,7 @@ export async function realpathIn(root, pathname) {
 /**
  * @param {string} filename to stat
  * @param {boolean} lstat whether to use lstat
- * @return {Promise<fs.Stats|null>} stats or null for unknown file
+ * @return {Promise<fs.Stats?>} stats or null for unknown file
  */
 export async function statOrNull(filename, lstat=false) {
   const method = lstat ? fs.lstat : fs.stat;

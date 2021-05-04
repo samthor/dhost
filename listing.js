@@ -11,13 +11,18 @@ import * as path from 'path';
  * @return {Promise<string[]>} contents of directory
  */
 async function directoryContents(filename, hidden=false) {
-  let listing = await new Promise((resolve, reject) => {
+  /** @type {Promise<string[]>} */
+  const p = new Promise((resolve, reject) => {
     fs.readdir(filename, (err, files) => err ? reject(err) : resolve(files));
   });
+  let listing = await p;
   if (!hidden) {
     listing = listing.filter((cand) => cand[0] !== '.');
   }
 
+  /**
+   * @param {string} cand
+   */
   const s = (cand) => {
     const target = path.join(filename, cand);
     return helper.statOrNull(target);
