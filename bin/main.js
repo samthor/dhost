@@ -10,17 +10,14 @@ import { bindAndStart } from '../lib/server.js';
 
 
 /**
- * @param {Partial<types.MainOptions>} options
+ * @param {types.MainOptions} options
  */
-export async function main(options) {
+export async function main(options = {}) {
   const handler = buildHandler(options);
 
   // This isn't really any of the types objects, but is close enough.
   const o = Object.assign({
     path: '.',
-    port: 9000,
-    portRange: true,
-    bindAll: false,
   }, options);
 
   const server = await bindAndStart(o, (req, res) => {

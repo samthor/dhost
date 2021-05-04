@@ -113,6 +113,6 @@ await main({
   serveHidden: options.serveHidden,
   rewriters,
   port: options.port || options.defaultPort,
-  portRange: !options.port,
+  targetPort: Boolean(options.port),
   bindAll: options.bindAll,
 });

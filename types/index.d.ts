@@ -19,11 +19,11 @@ export interface Options {
 
 export interface BindOptions {
   port: number;
-  portRange: boolean;
+  targetPort: boolean;
   bindAll: boolean;
 }
 
-export type MainOptions = Partial<Options> & BindOptions;
+export type MainOptions = Partial<Options & BindOptions>;
 
 export interface RArg {
   stat: fs.Stats|null;

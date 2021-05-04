@@ -33,7 +33,7 @@ To serve the current directory—without caching—using [Polka](https://github.
 
 ```js
 const polka = require('polka');
-const dhost = require('dhost');
+const dhost = require('dhost').default;  // or: import dhost from 'dhost';
 
 polka()
   .use(dhost({ /* optional options */}))
