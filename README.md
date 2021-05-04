@@ -6,6 +6,7 @@ Install globally via `npm -g install dhost` or `yarn global add dhost`, then run
 
 ⚠️ This is just for development.
 Don't use it in any sort of production.
+It reqiures Node 14+.
 
 # Magic
 
