@@ -75,7 +75,7 @@ export function createStringReadStream(raw) {
 /**
  * @param {string} root where results are valid within
  * @param {string} pathname within root, as per HTTP request
- * @return {Promise<string|null>} resolved real path or null for invalid symlink
+ * @return {Promise<string?>} resolved real path or null for invalid symlink
  */
 export async function realpathIn(root, pathname) {
   const hasTrailingSep = pathname.endsWith(path.sep);
