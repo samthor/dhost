@@ -42,6 +42,7 @@ function parseRange(rangeHeader, knownSize) {
   if (parts.length !== 2) {
     return;
   }
+  const numericParts = parts.map((part) => +part || 0);
 
   // nb. Both part values are non-negative, because we split on "-".
 
@@ -50,13 +51,13 @@ function parseRange(rangeHeader, knownSize) {
 
   // e.g. "range=-500", return last 500 bytes
   if (parts[1] && !parts[0]) {
-    start = Math.max(0, knownSize - +parts[1]) || 0;
+    start = Math.max(0, knownSize - numericParts[1]);
   } else if (parts[0] && !parts[1]) {
-    start = Math.min(+parts[0] || 0, knownSize);
+    start = Math.min(numericParts[0], knownSize);
   } else {
     // nb. end is inclusive (for some reason)
-    start = Math.min(+parts[0] || 0, knownSize);
-    end = Math.min((+parts[1] + 1) || 0, knownSize);
+    start = Math.min(numericParts[0], knownSize);
+    end = Math.min(numericParts[1] + 1, knownSize);
   }
 
   if (start > end) {
