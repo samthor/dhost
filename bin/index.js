@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import buildHandler from '../index.js';
+import buildHandler from '../lib/handler.js';
 import bytes from 'bytes';
 import * as color from 'colorette';
 import * as http from 'http';
