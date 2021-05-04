@@ -1,18 +1,13 @@
 #!/usr/bin/env node
 
-import buildHandler from '../lib/handler.js';
-import bytes from 'bytes';
 import * as color from 'colorette';
-import * as http from 'http';
 import mri from 'mri';
-import * as network from './network.js';
 import * as os from 'os';
-import * as path from 'path';
 import * as fs from 'fs';
 import * as types from '../types/index.js';
 import check from './check.js';
-import { copyToClipboard } from './clipboard.js';
 import { directoryListing, moduleRewriter } from '../lib/rware.js';
+import { main } from './main.js';
 
 
 const {pathname: specPath} = new URL('../package.json', import.meta.url);
@@ -76,161 +71,24 @@ if (typeof options.port !== 'number') {
 options.path = options._[0] || '.';
 
 
-/** @type {types.Options} */
+/** @type {types.MainOptions} */
 const o = {
   path: options.path,
   cors: options.cors,
   serveLink: options.serveLink,
   serveHidden: options.serveHidden,
   rewriters: [directoryListing],
+  port: options.port || options.defaultPort,
+  portRange: !options.port,
+  bindAll: options.bindAll,
 };
 
 if (options.module) {
   o.rewriters.push(moduleRewriter);
 }
 
-const handler = buildHandler(o);
+await main(o);
 
-
-async function bindAndStart() {
-  /**
-   * @param {http.IncomingMessage} req
-   * @param {http.ServerResponse} res
-   */
-  const internalHandler = (req, res) => {
-    // call our generated middleware and fail with 404 or 405
-    handler(req, res, () => {
-      let status = 404;
-
-      if (req.method !== 'GET' && req.method !== 'HEAD') {
-        status = 405;
-      }
-      res.writeHead(status);
-      res.end();
-    }).catch((err) => {
-      console.info(color.red('!'), err);
-      res.writeHead(500);
-      res.end();
-    });
-  };
-
-  const host = options.bindAll ? undefined : 'localhost';
-  const start = options.port || options.defaultPort;
-  let port = start;
-
-  for (;;) {
-    const server = http.createServer(internalHandler);
-    server.listen({host, port});
-
-    const ok = await new Promise((resolve) => {
-      server.on('listening', () => resolve(true));
-      server.on('error', () => resolve(false));
-    });
-    if (ok) {
-      return server;
-    }
-
-    // explicit port requested, but it couldn't be served
-    if (options.port) {
-      throw new Error(`Could not bind to requested port: ${options.port}`);
-    }
-
-    // otherwise, increment and try a new port
-    ++port;
-    const count = port - start;
-    if (count > 1000) {
-      throw new Error(`Tried ${count} ports, could not serve`);
-    }
-  }
-}
-
-
-bindAndStart().then((server) => {
-  const serverAddress = server.address();
-  if (!serverAddress || !(typeof serverAddress === 'object')) {
-    throw new Error(`could not find serverAddress: ${serverAddress}`);
-  }
-  const localURL = `http://localhost:${serverAddress.port}`;
-
-  let clipboardError = null;
-  try {
-    // Copying to clipboard can fail on headless Linux systems (possibly others).
-    copyToClipboard(localURL);
-  } catch (e) {
-    clipboardError = e;
-  }
-
-  console.info(color.blue('*'), 'Serving static files from', color.cyan(path.resolve(options.path)));
-  console.info(color.blue('*'), 'Local', color.green(localURL), clipboardError ? color.red('(could not copy to clipboard)') : color.dim('(on your clipboard!)'));
-
-  if (options.bindAll) {
-    // log all IP addresses we're listening on
-    const ips = network.localAddresses();
-    ips.forEach(({address, family}) => {
-      let display = address;
-      if (family === 'IPv6') {
-        display = `[${display}]`;
-      }
-      console.info(color.blue('*'), 'Network', color.green(`http://${display}:${serverAddress.port}`));
-    });
-  }
-
-  const padSize = Math.min(80, localURL.length * 2);
-  console.info(''.padEnd(padSize, '-'));
-
-  server.on('request', (req, res) => {
-    const requestParts = [req.url];
-
-    const forwardedFor = req.headers['x-forwarded-for'] || '';
-    const remoteAddresses = network.mergeForwardedFor(forwardedFor, req.socket.remoteAddress);
-    for (const remoteAddress of remoteAddresses) {
-      requestParts.push(color.gray(remoteAddress));  // display remote addr for non-localhost
-    }
-
-    console.info(color.gray('>'), color.cyan(req.method), requestParts.join(' '));
-    const start = process.hrtime();
-
-    res.on('finish', () => {
-      const duration = process.hrtime(start);
-      const ms = ((duration[0] + (duration[1] / 1e9)) * 1e3).toFixed(3);
-
-      const responseColor = res.statusCode >= 400 ? color.red : color.green;
-      const responseParts = [responseColor(res.statusCode), responseColor(res.statusMessage)];
-
-      // Render the served URL, or the 3xx 'Location' field
-      let url = req.url;
-      if (res.statusCode >= 300 && res.statusCode < 400) {
-        const location = res.getHeader('Location');
-        if (location) {
-          if (path.isAbsolute(location)) {
-            url = location;
-          } else {
-            let base = req.url;
-            if (base.endsWith('/')) {
-              base += '.';
-            }
-            url = path.join(path.dirname(base), location);
-          }
-        }
-      }
-      responseParts.push(url);
-      responseParts.push(color.dim(`${ms}ms`));
-
-      // Content-Length is only set by user code, not by Node, so it might not always exist
-      const contentLength = res.getHeader('Content-Length');
-      if (contentLength != null) {  // null or undefined
-        const displayBytes = bytes(+contentLength || 0);
-        responseParts.push(displayBytes);
-      }
-
-      console.info(color.gray('<'), responseParts.join(' '));
-    });
-  });
-
-}).catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
 
 
 (async function checkForUpdate() {
