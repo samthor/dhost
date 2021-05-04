@@ -11,7 +11,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as types from '../types/index.js';
 import check from './check.js';
-import {copyToClipboard} from './clipboard.js';
+import { copyToClipboard } from './clipboard.js';
+import { directoryListing, moduleRewriter } from '../lib/rware.js';
 
 
 const {pathname: specPath} = new URL('../package.json', import.meta.url);
@@ -25,8 +26,9 @@ const options = mri(process.argv.slice(2), {
     cors: false,
     serveLink: false,
     bindAll: false,
-    help: false,
     skipCheck: false,
+    module: false,
+    help: false,
   },
   alias: {
     defaultPort: ['d', 'default-port'],  // not visible in help
@@ -35,8 +37,8 @@ const options = mri(process.argv.slice(2), {
     serveLink: ['l', 'serve-link'],
     serveHidden: ['d', 'serve-hidden'],
     bindAll: ['a', 'bind-all'],
-    skipCheck: ['n', 'skip-check'],
     module: 'm',
+    skipCheck: ['n', 'skip-check'],
     help: 'h',
   },
   unknown: (v) => {
@@ -74,9 +76,19 @@ if (typeof options.port !== 'number') {
 options.path = options._[0] || '.';
 
 
-/** @type {Partial<types.Options>} */
-const o = {};
-Object.assign(o, options);
+/** @type {types.Options} */
+const o = {
+  path: options.path,
+  cors: options.cors,
+  serveLink: options.serveLink,
+  serveHidden: options.serveHidden,
+  rewriters: [directoryListing],
+};
+
+if (options.module) {
+  o.rewriters.push(moduleRewriter);
+}
+
 const handler = buildHandler(o);
 
 
