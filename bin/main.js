@@ -1,5 +1,4 @@
 
-
 import buildHandler from '../lib/handler.js';
 import bytes from 'bytes';
 import * as color from 'colorette';
@@ -119,5 +118,9 @@ export async function main(options) {
 
       console.info(color.gray('<'), responseParts.join(' '));
     });
+  });
+
+  await new Promise((_, reject) => {
+    server.on('error', reject);
   });
 }

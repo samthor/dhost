@@ -71,26 +71,7 @@ if (typeof options.port !== 'number') {
 options.path = options._[0] || '.';
 
 
-/** @type {types.MainOptions} */
-const o = {
-  path: options.path,
-  cors: options.cors,
-  serveLink: options.serveLink,
-  serveHidden: options.serveHidden,
-  rewriters: [directoryListing],
-  port: options.port || options.defaultPort,
-  portRange: !options.port,
-  bindAll: options.bindAll,
-};
-
-if (options.module) {
-  o.rewriters.push(moduleRewriter);
-}
-
-await main(o);
-
-
-
+// Enqueue a check update to happen later.
 (async function checkForUpdate() {
   if (options.skipCheck) {
     return;
@@ -117,4 +98,21 @@ await main(o);
 
 }()).catch((err) => {
   // ignore err
+});
+
+
+const rewriters = [directoryListing];
+if (options.module) {
+  rewriters.push(moduleRewriter);
+}
+
+await main({
+  path: options.path,
+  cors: options.cors,
+  serveLink: options.serveLink,
+  serveHidden: options.serveHidden,
+  rewriters,
+  port: options.port || options.defaultPort,
+  portRange: !options.port,
+  bindAll: options.bindAll,
 });

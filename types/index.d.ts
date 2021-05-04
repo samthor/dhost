@@ -23,7 +23,7 @@ export interface BindOptions {
   bindAll: boolean;
 }
 
-export type MainOptions = Options & BindOptions;
+export type MainOptions = Partial<Options> & BindOptions;
 
 export interface RArg {
   stat: fs.Stats|null;
@@ -36,4 +36,33 @@ export interface RResult {
   contentType?: string;
 }
 
-export * from '../index.js';
+export type Rewriter = (arg: RArg) => Promise<RResult|undefined>;
+
+/**
+ * Builds middleware that serves static files from the specified path, or the current directory by
+ * default. These files will always be served with zero caching headers.
+ */
+export default function buildHandler(o: Options|string = '.'): Handler;
+
+/**
+ * Creates a new dhost instance, including logging its friendly output. Used if you are building
+ * a dev server for yourself. This method never returns successfully and will always crash.
+ */
+export function main(o: MainOptions): Promise<void>;
+
+/**
+ * Standard rewriters that can be used by clients.
+ */
+export const rewriters = {
+
+  /**
+   * Creates directory listings if a directory is requested.
+   */
+  directoryListing: Rewriter,
+
+  /**
+   * Rewrites JS files for static ESM imports.
+   */
+  moduleRewriter: Rewriter,
+
+};
