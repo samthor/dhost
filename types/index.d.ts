@@ -2,28 +2,75 @@
 import * as fs from 'fs';
 import * as http from 'http';
 
-export type IncomingMessage = http.IncomingMessage & {originalUrl?: string};
-
 export type InternalHandler = (req: http.IncomingMessage, res: http.ServerResponse) => void;
 
 export type Handler = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => Promise<void>;
 
 
-export interface Options {
+export interface ServeOptions {
+
+  /**
+   * The directory to serve contents from.
+   *
+   * @default '.'
+   */
   path: string;
+
+  /**
+   * Whether to serve CORS requests.
+   *
+   * @default false
+   */
   cors: boolean;
+
+  /**
+   * Whether to serve the contents of symlinks, not just valid 302's.
+   *
+   * @default false
+   */
   serveLink: boolean;
+
+  /**
+   * Whether to serve hidden files.
+   *
+   * @default false
+   */
   serveHidden: boolean;
-  rewriters: ((arg: RArg) => Promise<RResult|undefined>)[];
+
+  /**
+   * Rewriters used to rewrite files, either missing or real. This is used by default to generate
+   * directory listings and rewrite ESM imports.
+   */
+  rewriters: Rewriter[];
+
 }
 
 export interface BindOptions {
+
+  /**
+   * The port to bind to.
+   *
+   * @default 9000
+   */
   port: number;
+
+  /**
+   * Whether we must bind only to the target port (`true`) or allow any nearby port.
+   *
+   * @default false
+   */
   targetPort: boolean;
+
+  /**
+   * Whether to bind to all interfaces, not just localhost.
+   *
+   * @default false
+   */
   bindAll: boolean;
+
 }
 
-export type MainOptions = Partial<Options & BindOptions>;
+export type MainOptions = Partial<ServeOptions & BindOptions>;
 
 export interface RArg {
   stat: fs.Stats|null;
@@ -42,7 +89,7 @@ export type Rewriter = (arg: RArg) => Promise<RResult|undefined>;
  * Builds middleware that serves static files from the specified path, or the current directory by
  * default. These files will always be served with zero caching headers.
  */
-export default function buildHandler(o: Options|string = '.'): Handler;
+export default function buildHandler(o: ServeOptions|string = '.'): Handler;
 
 /**
  * Creates a new dhost instance, including logging its friendly output. Used if you are building

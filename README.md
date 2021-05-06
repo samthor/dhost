@@ -8,6 +8,13 @@ Install globally via `npm -g install dhost` or `yarn global add dhost`, then run
 Don't use it in any sort of production.
 It reqiures Node 14+.
 
+# Running
+
+Run `dhost -h` for flags.
+By default, this hosts only on `localhost`, on the first available port 9000 or above, and copies the serving URL to your clipboard (works on macOS, _or_ if the optional `clipboardy` is found).
+
+If you need to serve CORS requests, run with `-c`; if you need to rewrite ESM imports in JS files, run with `-m`.
+
 # Magic
 
 The goal of this server is not to surprise you, and to avoid magic where possible.
@@ -16,16 +23,25 @@ Its behavior will never intentionally match any particular hosting platform's se
 Here are the exceptions:
 
 * We serve `index.html` if found, or generate a simple directory listing otherwise
-* Symlinks generate a 302 to their target file if it's within the root (serve contents instead via flag)
+* Symlinks generate a 302 to their target file if it's within the root (serve contents instead via `-l`)
 * No data is served for other status codes (i.e., your browser will render its own 404 page)
-* ✨ New! ✨ Specify `-m` to rewrite your JS to include ESM imports (e.g., "viz-observer" => "/node_modules/viz-observer/index.js")
 
-# Running
+## Modules
 
-Run `dhost -h` for flags.
-By default, this hosts only on `localhost`, on the first available port 9000 or above, and copies the serving URL to your clipboard (on macOS, _or_ if `clipboardy` is found).
+✨ New! ✨ Specify `-m` to rewrite your JS to include static ESM imports (e.g., "viz-observer" => "/node_modules/viz-observer/index.js").
 
-If you need to serve CORS requests, run with `-c`.
+This only works on static imports (e.g., `import 'foobar';'`), not dynamic ones (e.g., `import('foobar')`), as these can be any string (including ones generated at runtime).
+If you need to dynamically import from node_modules, add an extra helper file which doesn't need to be rewritten:
+
+```js
+// your code
+const foobarModule = await import('./foobar-wrapper.js');
+
+// foobar-wrapper.js
+export * from 'foobar';
+```
+
+Your build tools will compile this out, so the extra step won't effect a production build.
 
 # Middleware
 
