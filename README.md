@@ -1,4 +1,4 @@
-The never-caching development Node webserver for static files.
+The never-caching development Node webserver for static files and ESM dev work.
 This instructs browsers _never_ to cache any requested resources.
 If you've ever had to mash _Ctrl/Cmd-R_ to ensure your browser is seeing the latest version of a static site, you'll know this feeling.
 
@@ -42,6 +42,9 @@ export * from 'foobar';
 ```
 
 Your build tools will compile this out, so the extra step won't effect a production build.
+
+Note that this doesn't rewrite the modules _themselves_; you'll need to depend on packages that support ESM.
+(But you should be doing that anyway, it's 2021.)
 
 # Middleware
 
