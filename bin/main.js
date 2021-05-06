@@ -11,6 +11,7 @@ import { bindAndStart } from '../lib/server.js';
 
 /**
  * @param {types.MainOptions} options
+ * @return {Promise<never>}
  */
 export async function main(options = {}) {
   const handler = buildHandler(options);
@@ -120,4 +121,5 @@ export async function main(options = {}) {
   await new Promise((_, reject) => {
     server.on('error', reject);
   });
+  throw new Error(`internal error, should never shutdown`);
 }

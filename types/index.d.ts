@@ -95,7 +95,7 @@ export default function buildHandler(o: ServeOptions|string = '.'): Handler;
  * Creates a new dhost instance, including logging its friendly output. Used if you are building
  * a dev server for yourself. This method never returns successfully and will always crash.
  */
-export function main(o: MainOptions): Promise<void>;
+export function main(o: MainOptions): Promise<never>;
 
 /**
  * Standard rewriters that can be used by clients.

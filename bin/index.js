@@ -4,7 +4,6 @@ import * as color from 'colorette';
 import mri from 'mri';
 import * as os from 'os';
 import * as fs from 'fs';
-import * as types from '../types/index.js';
 import check from './check.js';
 import { directoryListing, moduleRewriter } from '../lib/rware.js';
 import { main } from './main.js';
