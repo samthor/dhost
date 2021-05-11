@@ -72,17 +72,42 @@ export interface BindOptions {
 
 export type MainOptions = Partial<ServeOptions & BindOptions>;
 
+/**
+ * The argument to {@link Rewriter}. This file may not exist, in which case the `stat` property
+ * will be null.
+ */
 export interface RArg {
   stat: fs.Stats|null;
+
+  /**
+   * The actual filename on disk that would be served.
+   */
   filename: string;
+
+  /**
+   * The requested pathname (from the server).
+   */
   pathname: string;
+
+  /**
+   * Any search component, including the leading "?" if provided.
+   */
+  search: string;
 }
 
+/**
+ * The optional result type. This will return a buffer to render, and an optional "Content-Type"
+ * header (otherwise it will be inferred from the requested filename).
+ */
 export interface RResult {
   buffer: Buffer;
   contentType?: string;
 }
 
+/**
+ * The type of a default 'rewriter' export, which will be run to determine whether a specific URL
+ * should be rewritten to another result.
+ */
 export type Rewriter = (arg: RArg) => Promise<RResult|undefined>;
 
 /**

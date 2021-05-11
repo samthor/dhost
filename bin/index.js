@@ -6,8 +6,12 @@ import * as os from 'os';
 import * as fs from 'fs';
 import check from './check.js';
 import { main } from './main.js';
-import directoryListing from '../rware/directory-listing.js'
-import moduleRewriter from '../rware/module-rewriter.js';
+import * as types from '../types/index.js';
+import * as path from 'path';
+
+
+const {pathname: __filename} = new URL(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 
 const {pathname: specPath} = new URL('../package.json', import.meta.url);
@@ -35,6 +39,7 @@ const options = mri(process.argv.slice(2), {
     module: 'm',
     skipCheck: ['n', 'skip-check'],
     help: 'h',
+    import: 'i',
   },
   unknown: (v) => {
     console.error('error: unknown option `' + v + '`');
@@ -57,6 +62,7 @@ Options:
   -d, --serve-hidden   serve hidden files (by default these 404)
   -a, --bind-all       listen on all network interfaces, not just localhost
   -n, --skip-check     don't check for an updated version of ${spec['name']}
+  -i, --import <path>  use this ES Module which default exports a rewriter
 
 v${spec['version']}
   `;
@@ -68,18 +74,43 @@ v${spec['version']}
 if (typeof options.port !== 'number') {
   options.port = null;
 }
-options.path = options._[0] || '.';
+
+
+// Find all requested imports (relative to cwd, not this file), and add our own defaults (directory
+// listing and optional module rewriter).
+const rewritersImports = [options.import || []].flat().map((p) => {
+  return path.relative(__dirname, path.resolve(p));
+});
+if (options.module) {
+  rewritersImports.push('../rware/module-rewriter.js');
+}
+rewritersImports.unshift('../rware/directory-listing.js');
+const rewriters = await Promise.all(rewritersImports.map(async (i) => {
+  return /** @type {types.Rewriter} */ ((await import(i)).default);
+}));
 
 
 // Enqueue a check update to happen later.
-(async function checkForUpdate() {
-  if (options.skipCheck) {
-    return;
-  }
+if (!options.skipCheck) {
+  checkForUpdate().catch(() => {});
+}
 
-  // TODO(samthor): use a package helper (which might create a temp folder)
 
-  const after = 1000 * (10 + 10 * Math.random());  // 10-20 sec delay
+// Party!
+await main({
+  path: options._[0] || '.',
+  cors: options.cors,
+  serveLink: options.serveLink,
+  serveHidden: options.serveHidden,
+  rewriters,
+  port: options.port || options.defaultPort,
+  targetPort: Boolean(options.port),
+  bindAll: options.bindAll,
+});
+
+
+async function checkForUpdate() {
+  const after = 1000 * (60 + 20 * Math.random());  // 60-80 sec delay
   await new Promise((r) => setTimeout(r, after));
 
   const latestVersion = await check(spec);
@@ -95,24 +126,4 @@ options.path = options._[0] || '.';
     console.info();
     console.info(`${color.bold(spec['name'])} upgrade available (latest ${color.green(latestVersion)}, installed ${color.red(spec['version'])})`);
   });
-
-}()).catch((err) => {
-  // ignore err
-});
-
-
-const rewriters = [directoryListing];
-if (options.module) {
-  rewriters.push(moduleRewriter);
 }
-
-await main({
-  path: options.path,
-  cors: options.cors,
-  serveLink: options.serveLink,
-  serveHidden: options.serveHidden,
-  rewriters,
-  port: options.port || options.defaultPort,
-  targetPort: Boolean(options.port),
-  bindAll: options.bindAll,
-});

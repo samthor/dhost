@@ -1,10 +1,11 @@
 
 import * as types from '../types/index.js';
 import mime from 'mime';
+import {pool} from 'async-transforms/worker';
 
 
-/** @type {((f: string, write: (part: Uint8Array) => void) => void) | null} */
-let sharedModuleRewriter = null;
+const workerPath = new URL('./module-rewriter-helper.js', import.meta.url).pathname;
+const asyncCompileTask = pool(workerPath, {minTasks: 1, expiry: 60_000});
 
 
 /**
@@ -16,15 +17,6 @@ export default async function moduleRewriter(arg) {
     return;
   }
 
-  if (!sharedModuleRewriter) {
-    const {default: buildModuleRewriter} = await import('gumnut/imports');
-    const {default: buildResolver} = await import('esm-resolve');
-    sharedModuleRewriter = await buildModuleRewriter(buildResolver);
-  }
-
-  /** @type {Uint8Array[]} */
-  const parts = [];
-  sharedModuleRewriter(arg.filename, (part) => parts.push(part));
-  return {buffer: Buffer.concat(parts)};
+  const buffer = /** @type {Buffer} */ (await asyncCompileTask(arg.filename));
+  return {buffer};
 }
-
