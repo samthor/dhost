@@ -9,6 +9,9 @@
     ".": {
       "import": "./index.js",
       "require": "./bundle.cjs"
+    },
+    "./rware/*.js": {
+      "import": "./rware/*.js"
     }
   },
   "types": "types/index.d.ts",

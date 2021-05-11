@@ -5,8 +5,9 @@ import mri from 'mri';
 import * as os from 'os';
 import * as fs from 'fs';
 import check from './check.js';
-import { directoryListing, moduleRewriter } from '../lib/rware.js';
 import { main } from './main.js';
+import directoryListing from '../rware/directory-listing.js'
+import moduleRewriter from '../rware/module-rewriter.js';
 
 
 const {pathname: specPath} = new URL('../package.json', import.meta.url);
