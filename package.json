@@ -38,6 +38,6 @@
     "rollup": "^2.47.0"
   },
   "scripts": {
-    "prepublishOnly": "rollup --format=cjs --file=bundle.cjs -- index.js "
+    "prepublishOnly": "rollup --format=cjs --file=bundle.cjs -- lib/handler.js "
   }
 }
