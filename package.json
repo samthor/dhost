@@ -23,10 +23,10 @@
     "bytes": "^3.1.0",
     "colorette": "^1.2.1",
     "esm-resolve": "^1.0.4",
-    "gumnut": "^0.3.1",
+    "gumnut": "^0.3.8",
     "he": "^1.2.0",
-    "mime": "^2.4.0",
-    "mri": "^1.1.4"
+    "mime": "^2.5.2",
+    "mri": "^1.1.6"
   },
   "bin": "./bin/index.js",
   "devDependencies": {

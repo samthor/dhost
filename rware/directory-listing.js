@@ -67,7 +67,7 @@ a:hover {
 </style>
 </head>
 <body>
-<h1>${rel}</h1>
+<h1>${he.encode(rel)}</h1>
 <ul>${links}</ul>
 </body>
 </html>`;
