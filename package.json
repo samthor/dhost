@@ -1,6 +1,6 @@
 {
   "name": "dhost",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "type": "module",
   "description": "Never-caching development Node webserver",
   "homepage": "https://github.com/samthor/dhost",
@@ -35,9 +35,9 @@
     "@types/mime": "^2.0.3",
     "@types/mri": "^1.1.0",
     "@types/node": "^14.14.24",
-    "rollup": "^2.47.0"
+    "esbuild": "^0.14.1"
   },
   "scripts": {
-    "prepublishOnly": "rollup --format=cjs --file=bundle.cjs -- lib/handler.js "
+    "prepublishOnly": "esbuild lib/handler.js --bundle --platform=node --target=es2015 --outfile=bundle.cjs"
   }
 }
