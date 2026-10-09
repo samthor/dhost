@@ -2,11 +2,12 @@
   "compilerOptions": {
     "checkJs": true,
     "noEmit": true,
-    "moduleResolution": "node",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
 
     // if you'd like to warn if you're using modern features, change these
     // both to e.g., "es2017"
-    "module": "esnext",
+    "module": "NodeNext",
     "target": "esnext",
 
     "strict": true,

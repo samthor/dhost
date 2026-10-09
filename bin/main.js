@@ -57,7 +57,7 @@ export async function main(options = {}) {
   if (o.bindAll) {
     // log all IP addresses we're listening on
     const ips = network.localAddresses();
-    ips.forEach(({address, family}) => {
+    ips.forEach(({ address, family }) => {
       let display = address;
       if (family === 'IPv6') {
         display = `[${display}]`;
@@ -72,13 +72,13 @@ export async function main(options = {}) {
   server.on('request', (req, res) => {
     const requestParts = [req.url];
 
-    const forwardedFor = req.headers['x-forwarded-for'] || '';
-    const remoteAddresses = network.mergeForwardedFor(forwardedFor, req.socket.remoteAddress);
+    const forwardedFor = firstItemFor(req.headers['x-forwarded-for']);
+    const remoteAddresses = network.mergeForwardedFor(forwardedFor, req.socket.remoteAddress ?? '');
     for (const remoteAddress of remoteAddresses) {
       requestParts.push(color.gray(remoteAddress));  // display remote addr for non-localhost
     }
 
-    console.info(color.gray('>'), color.cyan(req.method), requestParts.join(' '));
+    console.info(color.gray('>'), color.cyan(req.method ?? ''), requestParts.join(' '));
     const start = process.hrtime();
 
     res.on('finish', () => {
@@ -86,17 +86,17 @@ export async function main(options = {}) {
       const ms = ((duration[0] + (duration[1] / 1e9)) * 1e3).toFixed(3);
 
       const responseColor = res.statusCode >= 400 ? color.red : color.green;
-      const responseParts = [responseColor(res.statusCode), responseColor(res.statusMessage)];
+      const responseParts = [responseColor(String(res.statusCode)), responseColor(res.statusMessage)];
 
       // Render the served URL, or the 3xx 'Location' field
-      let url = req.url;
+      let url = req.url ?? '';
       if (res.statusCode >= 300 && res.statusCode < 400) {
-        const location = res.getHeader('Location');
+        const location = firstItemFor(res.getHeader('Location'));
         if (location) {
           if (path.isAbsolute(location)) {
             url = location;
           } else {
-            let base = req.url;
+            let base = url;
             if (base.endsWith('/')) {
               base += '.';
             }
@@ -111,7 +111,9 @@ export async function main(options = {}) {
       const contentLength = res.getHeader('Content-Length');
       if (contentLength != null) {  // null or undefined
         const displayBytes = bytes(+contentLength || 0);
-        responseParts.push(displayBytes);
+        if (displayBytes !== null) {
+          responseParts.push(displayBytes);
+        }
       }
 
       console.info(color.gray('<'), responseParts.join(' '));
@@ -123,3 +125,16 @@ export async function main(options = {}) {
   });
   throw new Error(`internal error, should never shutdown`);
 }
+
+/**
+ * @param {string|number|string[]|undefined} x
+ */
+const firstItemFor = (x) => {
+  if (Array.isArray(x)) {
+    return x[0] ?? '';
+  }
+  if (x === undefined) {
+    return '';
+  }
+  return String(x) ?? '';
+};

@@ -2,19 +2,19 @@
 
 import * as color from 'colorette';
 import mri from 'mri';
-import * as os from 'os';
-import * as fs from 'fs';
+import * as os from 'node:os';
+import * as fs from 'node:fs';
 import check from './check.js';
 import { main } from './main.js';
 import * as types from '../types/index.js';
-import * as path from 'path';
+import * as path from 'node:path';
 
 
-const {pathname: __filename} = new URL(import.meta.url);
+const { pathname: __filename } = new URL(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 
-const {pathname: specPath} = new URL('../package.json', import.meta.url);
+const { pathname: specPath } = new URL('../package.json', import.meta.url);
 const spec = JSON.parse(fs.readFileSync(specPath, 'utf-8'));
 
 
@@ -92,7 +92,7 @@ const rewriters = await Promise.all(rewritersImports.map(async (i) => {
 
 // Enqueue a check update to happen later.
 if (!options.skipCheck) {
-  checkForUpdate().catch(() => {});
+  checkForUpdate().catch(() => { });
 }
 
 
